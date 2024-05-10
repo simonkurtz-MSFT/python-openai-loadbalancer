@@ -1,6 +1,6 @@
 # Contributing to Python OpenAI Load Balancer
 
-Thank you for your interest in contributing to this repo! Please reach out to Simon Kurtz for details on how you can get involved.
+Thank you for your interest in contributing to this repo! If you come across bugs or see opportunity for improvement, please submit an issue in this repo first.
 
 The below list contains all contributors to date and should serve as a record of recognition for their efforts.
 
