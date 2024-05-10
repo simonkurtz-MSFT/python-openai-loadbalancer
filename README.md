@@ -89,7 +89,7 @@ Backend                       Successes  Failures
 oai-eastus.openai.azure.com          10         5
 
 
-**********************************************************
+*************************************************
 
 
 Number of requests                 : 10
