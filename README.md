@@ -55,6 +55,18 @@ When running in Azure, it's advised to use managed identities.
 
 1. Run `.\python-aoai.ps1`.
 
+## Distribution of Requests
+
+### Across Different Priorities
+
+- Priority 1, when available, will always supersede priority 2.
+- Priority 2, when available, will always supersede an unavailable priority 1.
+- Priority 3, when available, will always supersede unavailable priorities 1 & 2.
+
+### Across Multiple Backends of Same Priority
+
+While desirable, we are not presently achieving a uniform distribution across same priorities. This largely has to do with the available backends array changing in size, making it a quasi moving target to distribute across. To a lesser degree, the `random` module may also affect the distribution.
+
 ## Load Balancer Configuration
 
 At its core, the Load Balancer configuration requires one or more backend hosts and a numeric priority starting at 1. Please take note that you define a host, not a URL.
