@@ -14,11 +14,21 @@ Python OpenAI LoadBalancer is injected cleanly into the OpenAI Python API librar
 
 This project would not have been possible without the incredible work that [@andredewes](https://github.com/andredewes) has done with his [Smart Load Balancing for OpenAI Endpoints and Azure API Management](https://github.com/Azure-Samples/openai-apim-lb). If you use Azure API Management in your infrastructure, I highly recommend you consider his policy.
 
+## Prerequisites
+
+It helps to have some familiarity with how the [OpenAI Python API library](https://github.com/openai/openai-python) works. If you have used it before, then the code in `aoai.py` here will look very familiar to you.
+It's also good to have some knowledge of authentication and identities.
+
+## Authentication
+
+Locally, you can log into Azure via the CLI and the steps below and use the `AzureDefaultCredential` (what I use in my example). In Azure, you'd want to use a managed identity for your application. It's best to avoid using the Azure OpenAI instances' keys as that could a) accidentally leave credentials in your source code, and b) the keys are different for each instance, which would probably require expanding upon the `Backends` class. Best to just avoid keys.
+
 ## Current Limitations
 
 - Python OpenAI Load Balancer is primarily target for Azure OpenAI; however, it can be expanded upon to serve OpenAI endpoints as well.
 - Async is not yet supported.
 - My development setup is based on Windows and Powershell. I have not tried this with Linux.
+- Pseudo-load balancing (not exactly uniform).
 
 ## Contributions
 
@@ -28,7 +38,7 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Cloning the repo & Preparing the python environment
 
-1. Clone the repo
+1. Clone the repo.
 1. Open the cloned repo folder in VS Code.
 1. Open a terminal session in VS Code.
 1. Run `.\setup-python.ps1` to prepare the python environment.
