@@ -1,3 +1,5 @@
+# This is the original work that targeted only a single python worker (no parallelism). This is an unlikely scenario for production, but I decided to keep it in the repo.
+
 from datetime import datetime, MINYEAR, MAXYEAR, timedelta, timezone
 from dateutil.tz import tzutc
 from httpx import Client, Response, BaseTransport

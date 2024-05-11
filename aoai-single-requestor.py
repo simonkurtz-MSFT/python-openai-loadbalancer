@@ -1,3 +1,5 @@
+# This is the original work that targeted only a single python worker (no parallelism). This is an unlikely scenario for production, but I decided to keep it in the repo.
+
 from azure.identity import DefaultAzureCredential # type: ignore
 from datetime import datetime
 from openai import AzureOpenAI, DefaultHttpxClient, NotFoundError
