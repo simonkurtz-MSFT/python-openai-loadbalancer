@@ -1,8 +1,12 @@
-# Python OpenAI Load Balancer
-
+# Major Flaw
 ****************
 In my quest for good load-balancing, I completely forgot about needing to ensure the approach can work for multiple processes. It changes this dramatically, so, for the time being at least, consider this more as an experiment. =/
 ****************
+
+
+
+
+# Python OpenAI Load Balancer
 
 Many AI workloads require using more than one Azure OpenAI instance to prioritize Provisioned Throughput Units (PTUs) and insulate themselves from timeouts. In having worked with customers on Azure OpenAI implementations, there are a few common, desired configurations:
 
