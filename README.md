@@ -28,7 +28,6 @@ Locally, you can log into Azure via the CLI and the steps below and use the `Azu
 - Python OpenAI Load Balancer is primarily target for Azure OpenAI; however, it can be expanded upon to serve OpenAI endpoints as well.
 - Async is not yet supported.
 - My development setup is based on Windows and Powershell. I have not tried this with Linux.
-- Pseudo-load balancing (not exactly uniform).
 
 ## Contributions
 
