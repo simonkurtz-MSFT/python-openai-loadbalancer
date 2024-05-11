@@ -75,7 +75,22 @@ When running in Azure, it's advised to use managed identities.
 
 ### Across Multiple Backends of Same Priority
 
-While desirable, we are not presently achieving a uniform distribution across same priorities. This largely has to do with the available backends array changing in size, making it a quasi moving target to distribute across. To a lesser degree, the `random` module may also affect the distribution.
+The distribution of attempts over available backends should be fairly uniform for backends of the same priority.
+
+## Statistics
+
+The Load Balancer keeps track of statistics in its `Statistics` property. This information is helpful in ascertaining how requests are distributed, and identify successes and failures. 
+Furthermore, the statistics can be printed to the console.
+
+```python
+# Instantiate the LoadBalancer class and create a new https client with the LoadBalancer as the injected transport
+lb = LoadBalancer(backends)        
+
+... 
+
+# Print LoadBalancer Statistics
+lb.statistics.print()
+```
 
 ## Load Balancer Configuration
 
@@ -92,31 +107,31 @@ This is logically equivalent to what the standard approach does. This configurat
 ```python
 # Define the backends and their priority
 backends = [
-    Backends("oai-eastus.openai.azure.com", 1)
+    Backends("oai-eastus-xxxxxxxx.openai.azure.com", 1)
 ]
 ```
 
-This comparison is as close to apples-to-apples between standard and load-balanced approaches as we can get. The time for 10 requests is fairly similar and differs a bit due to when 429s may be incurred.
-While the number of requests is set to 10, the Load Balancer experiences five failures (i.e. HTTP 429) and ends up making a total of 15 requests to successfully satisfy 10 requested ones. Note that the python OpenAI API library has no knowledge of this (nor does it need to).
+This comparison is as close to apples-to-apples between standard and load-balanced approaches as we can get. The time for 20 requests is fairly similar and differs likelly only a bit due to when 429s may be incurred.
+While the number of requests is set to 20, the Load Balancer experiences six failures (i.e. HTTP 429) and ends up making a total of 26 requests to successfully satisfy the requested 20. Note that the python OpenAI API library has no knowledge of this (nor does it need to).
 
 ```text
 Load Balancer Statistics:
 
-Total Requests  : 15
-Total Successes : 10
-Total Failures  :  5
+Total Requests  : 26
+Total Successes : 20
+Total Failures  :  6
 
-Backend                       Successes  Failures
--------------------------------------------------
-oai-eastus.openai.azure.com          10         5
-
-
-*************************************************
+Backend                                Distribution %  Attempts  Successes  Failures
+------------------------------------------------------------------------------------
+oai-eastus-xxxxxxxx.openai.azure.com            100.0        26         20         6
 
 
-Number of requests                 : 10
-Single instance operation duration : 57.54 seconds
-Load-balancer operation duration   : 61.47 seconds
+*************************************************************************************
+
+
+Number of requests                 : 20
+Single instance operation duration : 80.94 seconds
+Load-balancer operation duration   : 79.61 seconds
 ```
 
 ### Two Backends with Same Priority
@@ -126,32 +141,32 @@ Load-balancing evenly between Azure OpenAI instances hedges you against being st
 ```python
 # Define the backends and their priority
 backends = [
-    Backends("oai-eastus.openai.azure.com", 1),
-    Backends("oai-southcentralus.openai.azure.com", 1)
+    Backends("oai-eastus-xxxxxxxx.openai.azure.com", 1),
+    Backends("oai-southcentralus-xxxxxxxx.openai.azure.com", 1)
 ]
 ```
 
-Over this very small sample size, with the load-balanced approach, a fairly linear distribution occurred over both Azure OpenAI endpoints. Take particular note of the duration of 10 requests. While the standard approach duration nearly matches our first configuration above, the load-balanced approach is significantly faster. Due to the intentionally low token-per-minute limit, the standard approach incurs HTTP 429s and consequently respects the `retry-after` before it attempts a retry. However, Load Balancer, upon any one failure from the backend, will automatically and immediately retry if an available backend is available. This eliminates significant wait!
+Over this very small sample size, with the load-balanced approach, a uniform distribution occurred over both Azure OpenAI endpoints. Take particular note of the duration of the 20 requests. While the standard approach duration nearly matches our first configuration above, the load-balanced approach is significantly faster. Due to the intentionally low token-per-minute limit, the standard approach incurs HTTP 429s and consequently respects the `retry-after` before it attempts a retry. However, Load Balancer, upon any one failure from the backend, will automatically and immediately retry if an available backend is available. This eliminates significant wait!
 
 ```text
 Load Balancer Statistics:
 
-Total Requests  : 14
-Total Successes : 10
-Total Failures  :  4
+Total Requests  : 20
+Total Successes : 20
+Total Failures  :  0
 
-Backend                               Successes  Failures
----------------------------------------------------------
-oai-eastus.openai.azure.com                   4         3
-oai-southcentralus.openai.azure.com           6         1
-
-
-*********************************************************
+Backend                                        Distribution %  Attempts  Successes  Failures
+--------------------------------------------------------------------------------------------
+oai-eastus-xxxxxxxx.openai.azure.com                     50.0        10         10         0
+oai-southcentralus-xxxxxxxx.openai.azure.com             50.0        10         10         0
 
 
-Number of requests                 : 10
-Single instance operation duration : 55.65 seconds
-Load-balancer operation duration   : 32.95 seconds
+********************************************************************************************
+
+
+Number of requests                 : 20
+Single instance operation duration : 79.49 seconds
+Load-balancer operation duration   : 56.43 seconds
 ```
 
 ### Three Backends with Same Priority
@@ -161,34 +176,58 @@ Adding a third backend with same priority exacerbates the difference to the stan
 ```python
 # Define the backends and their priority
 backends = [
-    Backends("oai-eastus.openai.azure.com", 1),
-    Backends("oai-southcentralus.openai.azure.com", 1),
-    Backends("oai-westus.openai.azure.com", 1)
+    Backends("oai-eastus-xxxxxxxx.openai.azure.com", 1),
+    Backends("oai-southcentralus-xxxxxxxx.openai.azure.com", 1),
+    Backends("oai-westus-xxxxxxxx.openai.azure.com", 1)
 ]
 ```
 
-Requests are now issued across three instances. The randomization did not yield as linear of a distribution, but the sample size is still relatively small. Again, note the difference in duration between the standard and load-balanced approach!
+Requests are now issued across three instances. The distribution over this fairly small sample set of 20 requests is fairly uniform. Again, note the difference in duration between the standard and load-balanced approach!
 
 ```text
 Load Balancer Statistics:
 
-Total Requests  : 26
+Total Requests  : 21
 Total Successes : 20
-Total Failures  :  6
+Total Failures  :  1
 
-Backend                               Successes  Failures
----------------------------------------------------------
-oai-westus.openai.azure.com                   1         2
-oai-southcentralus.openai.azure.com          10         2
-oai-eastus.openai.azure.com                   9         2
+Backend                                        Distribution %  Attempts  Successes  Failures
+--------------------------------------------------------------------------------------------
+oai-eastus-xxxxxxxx.openai.azure.com                     38.1         8          8         0
+oai-southcentralus-xxxxxxxx.openai.azure.com             38.1         8          8         0
+oai-westus-xxxxxxxx.openai.azure.com                    23.81         5          4         1
 
 
-*********************************************************
+********************************************************************************************
 
 
 Number of requests                 : 20
-Single instance operation duration : 117.44 seconds
-Load-balancer operation duration   : 69.06 seconds
+Single instance operation duration : 77.80 seconds
+Load-balancer operation duration   : 63.32 seconds
+```
+
+Running this over a larger sample size of 100 requests yields a near uniform distribution. Note the high failure count in the `westus` instance. The other two instances hedge perfectly against that.
+
+```text
+Load Balancer Statistics:
+
+Total Requests  : 119
+Total Successes : 100
+Total Failures  :  19
+
+Backend                                        Distribution %  Attempts  Successes  Failures
+--------------------------------------------------------------------------------------------
+oai-eastus-xxxxxxxx.openai.azure.com                    32.77        39         39         0
+oai-southcentralus-xxxxxxxx.openai.azure.com            32.77        39         39         0
+oai-westus-xxxxxxxx.openai.azure.com                    34.45        41         22        19
+
+
+********************************************************************************************
+
+
+Number of requests                 : 100
+Single instance operation duration : 413.98 seconds
+Load-balancer operation duration   : 332.00 seconds
 ```
 
 ### Three Backends with Two Different Priorities
@@ -198,9 +237,9 @@ The most common reason for this approach may well be the prioritization of Provi
 ```python
 # Define the backends and their priority
 backends = [
-    Backends("oai-eastus.openai.azure.com", 1),
-    Backends("oai-southcentralus.openai.azure.com", 2),
-    Backends("oai-westus.openai.azure.com", 2)
+    Backends("oai-eastus-xxxxxxxx.openai.azure.com", 1),
+    Backends("oai-southcentralus-xxxxxxxx.openai.azure.com", 2),
+    Backends("oai-westus-xxxxxxxx.openai.azure.com", 2)
 ]
 ```
 
@@ -213,19 +252,19 @@ Total Requests  : 25
 Total Successes : 20
 Total Failures  :  5
 
-Backend                               Successes  Failures
----------------------------------------------------------
-oai-eastus.openai.azure.com                  15         5
-oai-southcentralus.openai.azure.com           4         0
-oai-westus.openai.azure.com                   1         0
+Backend                                        Distribution %  Attempts  Successes  Failures
+--------------------------------------------------------------------------------------------
+oai-eastus-xxxxxxxx.openai.azure.com                     72.0        18         13         5
+oai-southcentralus-xxxxxxxx.openai.azure.com             16.0         4          4         0
+oai-westus-xxxxxxxx.openai.azure.com                     12.0         3          3         0
 
 
-*********************************************************
+********************************************************************************************
 
 
 Number of requests                 : 20
-Single instance operation duration : 80.03 seconds
-Load-balancer operation duration   : 59.71 seconds
+Single instance operation duration : 80.44 seconds
+Load-balancer operation duration   : 58.61 seconds
 ```
 
 ### Three Backends with Three Different Priorities
@@ -235,31 +274,31 @@ An example of this setup may be that most of your assets reside in one region (e
 ```python
 # Define the backends and their priority
 backends = [
-    Backends("oai-eastus.openai.azure.com", 1),
-    Backends("oai-southcentralus.openai.azure.com", 2),
-    Backends("oai-westus.openai.azure.com", 3)
+    Backends("oai-eastus-xxxxxxxx.openai.azure.com", 1),
+    Backends("oai-southcentralus-xxxxxxxx.openai.azure.com", 2),
+    Backends("oai-westus-xxxxxxxx.openai.azure.com", 3)
 ]
 ```
 
-Even though I had three backends defined, my sequential load tests from one machine did not levy significant enough load to where both priority 1 and 2 were unavailable at the same time. You can see the bias towards the priority 1 backend with 37 successes while all 13 failures (429s) were handled by the priority 2 backend.
+Even though I had three backends defined, my sequential load tests from one machine did not generate significantly enough load to where both priority 1 and 2 were unavailable at the same time. You can see the bias towards the priority 1 backend with 39 successes while all 11 failures (429s) were handled by the priority 2 backend. A much more concurrent set of requests would have likely shown the priority 3 tier being exercised as well.
 
 ```text
 Load Balancer Statistics:
 
-Total Requests  : 63
+Total Requests  : 61
 Total Successes : 50
-Total Failures  : 13
+Total Failures  : 11
 
-Backend                               Successes  Failures
----------------------------------------------------------
-oai-eastus.openai.azure.com                  37        13
-oai-southcentralus.openai.azure.com          13         0
+Backend                                        Distribution %  Attempts  Successes  Failures
+--------------------------------------------------------------------------------------------
+oai-eastus-xxxxxxxx.openai.azure.com                    81.97        50         39        11
+oai-southcentralus-xxxxxxxx.openai.azure.com            18.03        11         11         0
 
 
-*********************************************************
+********************************************************************************************
 
 
 Number of requests                 : 50
-Single instance operation duration : 204.01 seconds
-Load-balancer operation duration   : 148.52 seconds
+Single instance operation duration : 199.23 seconds
+Load-balancer operation duration   : 163.28 seconds
 ```
