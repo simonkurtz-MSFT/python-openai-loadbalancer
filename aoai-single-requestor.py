@@ -56,15 +56,19 @@ def send_loadbalancer_request(num_of_requests, backends: Backend):
         for i in range(num_of_requests):
             print(f"{datetime.now()}: LoadBalancer request {i+1}/{num_of_requests}")
 
-            response = client.chat.completions.create(
-                model = MODEL,
-                messages = [
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
-                ]
-            )
+            try:
+                response = client.chat.completions.create(
+                    model = MODEL,
+                    messages = [
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
+                    ]
+                )
 
-            print(f"{datetime.now()}:\n{response}\n\n\n")
+                print(f"{datetime.now()}:\n{response}\n\n\n")
+            except Exception as e:
+                print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
+                traceback.print_exc()
 
         # Print LoadBalancer Statistics
         lb.statistics.print()
