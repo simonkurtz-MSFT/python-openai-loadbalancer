@@ -75,7 +75,8 @@ When running in Azure, it's advised to use managed identities.
 
 ## Execution
 
-1. Run `.\python-aoai.ps1`.
+1. Run `.\python-aoai.ps1` just once to see it execute properly.
+1. Run `.\python-aoai.ps1` concurrently in multiple terminals to simulate parallel requests from multiple python workers.
 
 ## Distribution of Requests
 
