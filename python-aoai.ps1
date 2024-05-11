@@ -5,5 +5,5 @@ if (Test-Path -Path "/usr") {
     # fallback to Linux venv path
     $venvPythonPath = "./python_env/bin/python"
 }
- 
+
 Start-Process -FilePath $venvPythonPath -ArgumentList "./aoai.py" -Wait -NoNewWindow

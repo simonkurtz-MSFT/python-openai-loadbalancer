@@ -16,7 +16,7 @@ if (Test-Path -Path "/usr") {
 }
 
 Write-Host "2) Restoring python packages ...`n"
- 
+
 Start-Process -FilePath $venvPythonPath -ArgumentList "-m pip install -r requirements.txt" -Wait -NoNewWindow
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to restore python packages"
