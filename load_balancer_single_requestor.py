@@ -125,14 +125,15 @@ class LoadBalancer(BaseTransport):
                 soonest_backend = backend.host
 
         delay = int((soonest_retry_after - datetime.now(timezone.utc)).total_seconds()) + 1     # Add a 1 second buffer to ensure we don't retry too early
-        print(f"{datetime.now()}:   Soonest Retry After: {soonest_backend} - {str(delay)} second(s)")
+        print(f"{datetime.now()}:      Soonest Retry After: {soonest_backend} - {str(delay)} second(s)")
 
         return delay
     
     def _return_429(self):
-        print(f"{datetime.now()}:    No Backend available. Exiting.")             
-        retryAfter = str(self._get_soonest_retry_after())                
-        return Response(429, content='', headers={'Retry-After': retryAfter})        
+        print(f"{datetime.now()}:   No backend available.")             
+        retry_after = str(self._get_soonest_retry_after()) 
+        print(f"{datetime.now()}:   Returning HTTP 429 with {retry_after} seconds.")             
+        return Response(429, content='', headers={'Retry-After': retry_after})
 
     # Public Methods
     def handle_request(self, request):
@@ -165,19 +166,19 @@ class LoadBalancer(BaseTransport):
                 
                 currentBackendIndex = backendIndex
 
-                retryAfter = int(response.headers.get('Retry-After', '-1'))
+                retry_after = int(response.headers.get('Retry-After', '-1'))
 
-                if retryAfter == -1:
-                    retryAfter = int(response.headers.get('x-ratelimit-reset-requests', '-1'))
+                if retry_after == -1:
+                    retry_after = int(response.headers.get('x-ratelimit-reset-requests', '-1'))
 
-                if retryAfter == -1:
-                    retryAfter = int(response.headers.get('x-ratelimit-reset-requests', '10'))
+                if retry_after == -1:
+                    retry_after = int(response.headers.get('x-ratelimit-reset-requests', '10'))
 
-                print(f"{datetime.now()}:   Backend {self.backends[currentBackendIndex].host} is throttling. Retry after {retryAfter} second(s).")
+                print(f"{datetime.now()}:   Backend {self.backends[currentBackendIndex].host} is throttling. Retry after {retry_after} second(s).")
 
                 backend = self.backends[currentBackendIndex]
                 backend.is_throttling = True
-                backend.retry_after = datetime.now(tzutc()) + timedelta(seconds=retryAfter)
+                backend.retry_after = datetime.now(tzutc()) + timedelta(seconds=retry_after)
                 self._get_remainingBackend()            
                 continue
 
