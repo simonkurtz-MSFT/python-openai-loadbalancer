@@ -1,7 +1,6 @@
 from datetime import datetime, MINYEAR, timedelta
 from dateutil.tz import tzutc
 from httpx import Client, Response, BaseTransport
-import random
 import traceback
 
 class Backends:
@@ -10,6 +9,7 @@ class Backends:
         self.priority = priority
         self.is_throttling = False
         self.retry_after = datetime.min
+        self.successful_call_count = 0
 
 class LoadBalancer(BaseTransport):
     class Statistics:
@@ -24,11 +24,13 @@ class LoadBalancer(BaseTransport):
 
         def update_backend_stats(self, host, success):
             if host not in self.BackendStats:
-                self.BackendStats[host] = {'successes': 0, 'failures': 0}
+                self.BackendStats[host] = {'attempts': 0, 'successes': 0, 'failures': 0}
             if success:
+                self.BackendStats[host]['attempts'] += 1
                 self.BackendStats[host]['successes'] += 1
                 self.TotalSuccesses += 1
             else:
+                self.BackendStats[host]['attempts'] += 1
                 self.BackendStats[host]['failures'] += 1
                 self.TotalFailures += 1
 
@@ -36,17 +38,17 @@ class LoadBalancer(BaseTransport):
 
         def print(self):
             longest_host_string = len(max(self.BackendStats.keys(), key=len))
-            repeater = longest_host_string + 22
+            repeater = longest_host_string + 48
             
             print("*" * repeater)
             pad = len(str(self.TotalRequests))    
             print(f"\nLoad Balancer Statistics: \n\nTotal Requests  : {str(self.TotalRequests).rjust(pad)}\nTotal Successes : {str(self.TotalSuccesses).rjust(pad)}\nTotal Failures  : {str(self.TotalFailures).rjust(pad)}\n")
 
             # Print the statistics per backend
-            print(f"{'Backend':<{longest_host_string + 2}} {'Successes':<10} {'Failures':<10}")
+            print(f"{'Backend':<{longest_host_string + 2}} {'Distribution %':<15} {'Attempts':<9} {'Successes':<10} {'Failures':<10}")
             print("-" * repeater)
             for host, stats in self.BackendStats.items():
-                print(f"{host:<{longest_host_string + 2}} {stats['successes']:>9} {stats['failures']:>9}")
+                print(f"{host:<{longest_host_string + 2}} {round((stats['attempts'] * 100 / self.TotalRequests), 2):>14} {stats['attempts']:>9} {stats['successes']:>10} {stats['failures']:>9}")
             print("\n")
     
     # Constructor
@@ -90,9 +92,16 @@ class LoadBalancer(BaseTransport):
             return availableBackends[0]
 
         if len(availableBackends) > 0:
-            # Returns a random available backend from the list if we have more than one available with the same priority
-            rand = random.choice(availableBackends)
-            return rand
+            # Select the backend with the lowest successful_call_count to achieve a more balanced distribution than what random.choice() could provide over a variable length array
+            min_successful_call_count = self.Backends[availableBackends[0]].successful_call_count
+            selected_backend = availableBackends[0]
+
+            for i in availableBackends[1:]:
+                if self.Backends[i].successful_call_count < min_successful_call_count:
+                    min_successful_call_count = self.Backends[i].successful_call_count
+                    selected_backend = i
+
+            return selected_backend            
         else:
             # If there are no available backends, -1 will be returned to indicate that nothing is available (and that we should bail).
             return -1
@@ -158,6 +167,7 @@ class LoadBalancer(BaseTransport):
             elif response is not None and (response.status_code >= 200 and response.status_code <= 399):
                 # Successful requests
                 print(f"{datetime.now()}:   Request sent to server: {request.url}, Status code: {response.status_code}")
+                self.Backends[backendIndex].successful_call_count += 1
                 self.statistics.update_backend_stats(self.Backends[backendIndex].host, True)  # Request was successful
                 break
 
