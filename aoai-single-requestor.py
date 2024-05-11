@@ -8,7 +8,7 @@ import traceback
 
 def token_provider():
     credential = DefaultAzureCredential()
-    token = credential.get_token('https://cognitiveservices.azure.com/.default')    
+    token = credential.get_token('https://cognitiveservices.azure.com/.default')
     return token.token
 
 # Standard Azure OpenAI Implementation (One Backend)
@@ -22,7 +22,7 @@ def send_request(num_of_requests, azure_endpoint: str):
 
         for i in range(num_of_requests):
             print(f"{datetime.now()}: Standard request {i+1}/{num_of_requests}")
-        
+
             response = client.chat.completions.create(
                 model = MODEL,
                 messages = [
@@ -44,7 +44,7 @@ def send_request(num_of_requests, azure_endpoint: str):
 def send_loadbalancer_request(num_of_requests, backends: Backend):
     try:
         # Instantiate the LoadBalancer class and create a new https client with the LoadBalancer as the injected transport
-        lb = LoadBalancer(backends)        
+        lb = LoadBalancer(backends)
 
         client = AzureOpenAI(
             azure_endpoint = f"https://{backends[0].host}",   # Must be seeded, so we use the first host. It will get overwritten by the LoadBalancer
@@ -55,7 +55,7 @@ def send_loadbalancer_request(num_of_requests, backends: Backend):
 
         for i in range(num_of_requests):
             print(f"{datetime.now()}: LoadBalancer request {i+1}/{num_of_requests}")
-        
+
             response = client.chat.completions.create(
                 model = MODEL,
                 messages = [
