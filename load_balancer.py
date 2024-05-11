@@ -1,4 +1,4 @@
-from datetime import datetime, MINYEAR, timedelta
+from datetime import datetime, MINYEAR, MAXYEAR, timedelta, timezone
 from dateutil.tz import tzutc
 from httpx import Client, Response, BaseTransport
 import traceback
@@ -57,7 +57,6 @@ class LoadBalancer(BaseTransport):
         self._transport = Client()
         self.statistics = self.Statistics()
         self.Backends = backends
-        self.LastRetryAfter = 0
         self._backendIndex = -1
         self._remainingBackends = 1        
 
@@ -116,6 +115,19 @@ class LoadBalancer(BaseTransport):
 
         return self._remainingBackends
 
+    def _get_soonest_retry_after(self):
+        soonest_retry_after = datetime(MAXYEAR, 1, 1, tzinfo=tzutc())
+        
+        for backend in self.Backends:
+            if backend.is_throttling and backend.retry_after < soonest_retry_after:
+                soonest_retry_after = backend.retry_after
+                soonest_backend = backend.host
+
+        delay = int((soonest_retry_after - datetime.now(timezone.utc)).total_seconds()) + 1     # Add a 1 second buffer to ensure we don't retry too early
+        print(f"{datetime.now()}:   Soonest Retry After: {soonest_backend} - {str(delay)} second(s)")
+
+        return delay
+
     # Public Methods
     def handle_request(self, request):
         self._check_throttling()
@@ -127,7 +139,8 @@ class LoadBalancer(BaseTransport):
             
             if backendIndex == -1:
                 print(f"{datetime.now()}:    No backends available. Exiting.")             
-                return Response(429, content='', headers={'Retry-After': str(self.LastRetryAfter)})
+                retryAfter = str(self._get_soonest_retry_after())                
+                return Response(429, content='', headers={'Retry-After': retryAfter})
             
             # Update URL and host header
             request.url = request.url.copy_with(host=self.Backends[backendIndex].host)                
@@ -156,12 +169,11 @@ class LoadBalancer(BaseTransport):
                 if retryAfter == -1:
                     retryAfter = int(response.headers.get('x-ratelimit-reset-requests', '10'))
 
-                print(f"{datetime.now()}:   Backend {self.Backends[currentBackendIndex].host} is throttling. Retry after {retryAfter} seconds.")
+                print(f"{datetime.now()}:   Backend {self.Backends[currentBackendIndex].host} is throttling. Retry after {retryAfter} second(s).")
 
                 backend = self.Backends[currentBackendIndex]
                 backend.is_throttling = True
                 backend.retry_after = datetime.now(tzutc()) + timedelta(seconds=retryAfter)
-                self.LastRetryAfter = retryAfter
                 self._get_remainingBackends()            
                 continue
 
@@ -180,6 +192,7 @@ class LoadBalancer(BaseTransport):
 
         if self._remainingBackends == 0:
             print(f"{datetime.now()}:   No backends available. Exiting.")
-            return Response(429, content='', headers={'Retry-After': str(self.LastRetryAfter)})
+            retryAfter = str(self._get_soonest_retry_after())
+            return Response(429, content='', headers={'Retry-After': retryAfter})
 
         return response
