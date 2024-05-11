@@ -130,7 +130,9 @@ class LoadBalancer(BaseTransport):
         return delay
     
     def _return_429(self):
-        return self._return_429()
+        print(f"{datetime.now()}:    No Backend available. Exiting.")             
+        retryAfter = str(self._get_soonest_retry_after())                
+        return Response(429, content='', headers={'Retry-After': retryAfter})        
 
     # Public Methods
     def handle_request(self, request):
@@ -142,9 +144,7 @@ class LoadBalancer(BaseTransport):
             backendIndex = self._get_backendIndex()
             
             if backendIndex == -1:
-                print(f"{datetime.now()}:    No Backend available. Exiting.")             
-                retryAfter = str(self._get_soonest_retry_after())                
-                return Response(429, content='', headers={'Retry-After': retryAfter})
+                return self._return_429()                
             
             # Update URL and host header
             request.url = request.url.copy_with(host=self.backends[backendIndex].host)                
