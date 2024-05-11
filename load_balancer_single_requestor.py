@@ -18,10 +18,10 @@ class LoadBalancer(BaseTransport):
             self.reset_statistics()
 
         def reset_statistics(self):
-            self.total_requests = 0     
+            self.total_requests = 0
             self.total_failures = 0
-            self.total_successes = 0      
-            self.backends_stats = {} 
+            self.total_successes = 0
+            self.backends_stats = {}
 
         def update_backend_stats(self, host, success):
             if host not in self.backends_stats:
@@ -40,9 +40,9 @@ class LoadBalancer(BaseTransport):
         def print(self):
             longest_host_string = len(max(self.backends_stats.keys(), key=len))
             repeater = longest_host_string + 48
-            
+
             print("*" * repeater)
-            pad = len(str(self.total_requests))    
+            pad = len(str(self.total_requests))
             print(f"\nLoad Balancer Statistics: \n\nTotal Requests  : {str(self.total_requests).rjust(pad)}\nTotal Successes : {str(self.total_successes).rjust(pad)}\nTotal Failures  : {str(self.total_failures).rjust(pad)}\n")
 
             # Print the statistics per backend
@@ -52,14 +52,14 @@ class LoadBalancer(BaseTransport):
                 print(f"{host:<{longest_host_string + 2}} {round((stats['attempts'] * 100 / self.total_requests), 2):>14} {stats['attempts']:>9} {stats['successes']:>10} {stats['failures']:>9}")
             print("\n")
             print("*" * repeater)
-    
+
     # Constructor
     def __init__(self, backends: List[Backend]):
         self._transport = Client()
         self.statistics = self.Statistics()
         self.backends = backends
         self._backendIndex = -1
-        self._remainingBackend = 1        
+        self._remainingBackend = 1
 
     # Private Methods
     def _check_throttling(self):
@@ -70,7 +70,7 @@ class LoadBalancer(BaseTransport):
                 backend.is_throttling = False
                 backend.retry_after = min_datetime
                 print(f"{datetime.now()}:   Backend {backend.host} is no longer throttling.")
-    
+
     def _get_backendIndex(self):
         # This is the main logic to pick the backend to be used
         selected_priority = float('inf')
@@ -102,7 +102,7 @@ class LoadBalancer(BaseTransport):
                     min_successful_call_count = self.backends[i].successful_call_count
                     selected_backend = i
 
-            return selected_backend            
+            return selected_backend
         else:
             # If there are no available Backend, -1 will be returned to indicate that nothing is available (and that we should bail).
             return -1
@@ -118,7 +118,7 @@ class LoadBalancer(BaseTransport):
 
     def _get_soonest_retry_after(self):
         soonest_retry_after = datetime(MAXYEAR, 1, 1, tzinfo=tzutc())
-        
+
         for backend in self.backends:
             if backend.is_throttling and backend.retry_after < soonest_retry_after:
                 soonest_retry_after = backend.retry_after
@@ -128,11 +128,11 @@ class LoadBalancer(BaseTransport):
         print(f"{datetime.now()}:      Soonest Retry After: {soonest_backend} - {str(delay)} second(s)")
 
         return delay
-    
+
     def _return_429(self):
-        print(f"{datetime.now()}:   No backend available.")             
-        retry_after = str(self._get_soonest_retry_after()) 
-        print(f"{datetime.now()}:   Returning HTTP 429 with {retry_after} seconds.")             
+        print(f"{datetime.now()}:   No backend available!")
+        retry_after = str(self._get_soonest_retry_after())
+        print(f"{datetime.now()}:   Returning HTTP 429 with Retry-After header value of {retry_after} second(s).")
         return Response(429, content='', headers={'Retry-After': retry_after})
 
     # Public Methods
@@ -140,30 +140,30 @@ class LoadBalancer(BaseTransport):
         self._check_throttling()
         self._get_remainingBackend()
         response = None
-        
-        while True and self._remainingBackend > 0:            
+
+        while True and self._remainingBackend > 0:
             backendIndex = self._get_backendIndex()
-            
+
             if backendIndex == -1:
-                return self._return_429()                
-            
+                return self._return_429()
+
             # Update URL and host header
-            request.url = request.url.copy_with(host=self.backends[backendIndex].host)                
+            request.url = request.url.copy_with(host=self.backends[backendIndex].host)
             headers = request.headers.copy()    # Create a mutable copy of the headers
-            headers['host'] = self.backends[backendIndex].host        
+            headers['host'] = self.backends[backendIndex].host
             request.headers = headers           # Assign the modified headers back to request.headers
 
             # Send the request to the backend
             try:
-                response = self._transport.send(request)                
+                response = self._transport.send(request)
             except Exception as e:
                 traceback.print_exc()
 
-            if response is not None and (response.status_code == 429 or response.status_code >= 500):                
+            if response is not None and (response.status_code == 429 or response.status_code >= 500):
                 # If the server is throttling or there's a server error, retry with a different server
                 print(f"{datetime.now()}:   Request sent to server: {request.url}, Status Code: {response.status_code} - FAIL")
                 self.statistics.update_backend_stats(self.backends[backendIndex].host, False)  # Request failed
-                
+
                 currentBackendIndex = backendIndex
 
                 retry_after = int(response.headers.get('Retry-After', '-1'))
@@ -179,7 +179,7 @@ class LoadBalancer(BaseTransport):
                 backend = self.backends[currentBackendIndex]
                 backend.is_throttling = True
                 backend.retry_after = datetime.now(tzutc()) + timedelta(seconds=retry_after)
-                self._get_remainingBackend()            
+                self._get_remainingBackend()
                 continue
 
             elif response is not None and (response.status_code >= 200 and response.status_code <= 399):
