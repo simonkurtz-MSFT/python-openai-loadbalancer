@@ -8,7 +8,7 @@ import traceback
 
 def token_provider():
     credential = DefaultAzureCredential()
-    token = credential.get_token('https://cognitiveservices.azure.com/.default')    
+    token = credential.get_token('https://cognitiveservices.azure.com/.default')
     return token.token
 
 # Standard Azure OpenAI Implementation (One Backend)
@@ -22,7 +22,7 @@ def send_request(num_of_requests, azure_endpoint: str):
 
         for i in range(num_of_requests):
             print(f"{datetime.now()}: Standard request {i+1}/{num_of_requests}")
-        
+
             response = client.chat.completions.create(
                 model = MODEL,
                 messages = [
@@ -44,7 +44,7 @@ def send_request(num_of_requests, azure_endpoint: str):
 def send_loadbalancer_request(num_of_requests, backends: Backend):
     try:
         # Instantiate the LoadBalancer class and create a new https client with the LoadBalancer as the injected transport
-        lb = LoadBalancer(backends)        
+        lb = LoadBalancer(backends)
 
         client = AzureOpenAI(
             azure_endpoint = f"https://{backends[0].host}",   # Must be seeded, so we use the first host. It will get overwritten by the LoadBalancer
@@ -55,19 +55,20 @@ def send_loadbalancer_request(num_of_requests, backends: Backend):
 
         for i in range(num_of_requests):
             print(f"{datetime.now()}: LoadBalancer request {i+1}/{num_of_requests}")
-        
-            response = client.chat.completions.create(
-                model = MODEL,
-                messages = [
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
-                ]
-            )
 
-            print(f"{datetime.now()}:\n{response}\n\n\n")
+            try:
+                response = client.chat.completions.create(
+                    model = MODEL,
+                    messages = [
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
+                    ]
+                )
 
-        # Print LoadBalancer Statistics
-        lb.statistics.print()
+                print(f"{datetime.now()}:\n{response}\n\n\n")
+            except Exception as e:
+                print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
+                traceback.print_exc()
 
     except NotFoundError as e:
         print("openai.NotFoundError:", vars(e))
@@ -105,7 +106,6 @@ send_loadbalancer_request(NUM_OF_REQUESTS, backends)
 lb_end_time = time.time()
 
 # Statistics
-
 print("\n")
 print(f"Number of requests                 : {NUM_OF_REQUESTS}")
 print(f"Single instance operation duration : {end_time - start_time:.2f} seconds")
