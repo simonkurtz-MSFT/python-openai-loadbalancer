@@ -96,7 +96,6 @@ lb_start_time = time.time()
 send_loadbalancer_request(num_of_requests)
 lb_end_time = time.time()
 
-print("*" * 60)
 print("\n")
 print(f"Number of requests                 : {num_of_requests}")
 print(f"Single instance operation duration : {end_time - start_time:.2f} seconds")

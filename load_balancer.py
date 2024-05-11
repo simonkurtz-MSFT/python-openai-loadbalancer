@@ -50,6 +50,7 @@ class LoadBalancer(BaseTransport):
             for host, stats in self.BackendStats.items():
                 print(f"{host:<{longest_host_string + 2}} {round((stats['attempts'] * 100 / self.TotalRequests), 2):>14} {stats['attempts']:>9} {stats['successes']:>10} {stats['failures']:>9}")
             print("\n")
+            print("*" * repeater)
     
     # Constructor
     def __init__(self, backends: 'LoadBalancer.Backends' = []):
