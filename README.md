@@ -8,6 +8,8 @@ Many AI workloads require using more than one Azure OpenAI instance to prioritiz
 
 While the [OpenAI Python API library](https://github.com/openai/openai-python) respects HTTP 429 and automatically retries after the requested wait period, the library is not set up to support the aforementioned customer desires. The library does, however, allow for the injection of custom httpx clients. This gave rise to this project.
 
+And while there are other Python OpenAI load balancers freely available, I have not seen one yet that can address the aforementioned scenarios.
+
 Python OpenAI LoadBalancer is injected cleanly into the OpenAI Python API library. The changes between a conventional and a load-balanced Azure OpenAI implementation are few and almost entirely configuration of the backends to be used. You can see a side-by-side example in the `aoai.py` file in this repo.
 
 ## Attribution
