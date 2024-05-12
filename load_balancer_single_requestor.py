@@ -7,6 +7,7 @@ from typing import List
 import traceback
 
 class Backend:
+    # Constructor
     def __init__(self, host: str, priority: int):
         self.host = host
         self.priority = priority
@@ -16,31 +17,13 @@ class Backend:
 
 class LoadBalancer(BaseTransport):
     class Statistics:
+        # Constructor
         def __init__(self):
             self.reset_statistics()
 
-        def reset_statistics(self):
-            self.total_requests = 0
-            self.total_failures = 0
-            self.total_successes = 0
-            self.backends_stats = {}
-
-        def update_backend_stats(self, host, success):
-            if host not in self.backends_stats:
-                self.backends_stats[host] = {'attempts': 0, 'successes': 0, 'failures': 0}
-            if success:
-                self.backends_stats[host]['attempts'] += 1
-                self.backends_stats[host]['successes'] += 1
-                self.total_successes += 1
-            else:
-                self.backends_stats[host]['attempts'] += 1
-                self.backends_stats[host]['failures'] += 1
-                self.total_failures += 1
-
-            self.total_requests += 1
-
+        # Public Methods
         def print(self):
-            longest_host_string = len(max(self.backends_stats.keys(), key=len))
+            longest_host_string = len(max(self.backends_stats.keys(), key = len))
             repeater = longest_host_string + 48
 
             print("*" * repeater)
@@ -55,6 +38,27 @@ class LoadBalancer(BaseTransport):
             print("\n")
             print("*" * repeater)
 
+        def reset_statistics(self):
+            self.total_requests = 0
+            self.total_failures = 0
+            self.total_successes = 0
+            self.backends_stats = {}
+
+        def update_backend_stats(self, host, success):
+            if host not in self.backends_stats:
+                self.backends_stats[host] = {'attempts': 0, 'successes': 0, 'failures': 0}
+
+            if success:
+                self.backends_stats[host]['attempts'] += 1
+                self.backends_stats[host]['successes'] += 1
+                self.total_successes += 1
+            else:
+                self.backends_stats[host]['attempts'] += 1
+                self.backends_stats[host]['failures'] += 1
+                self.total_failures += 1
+
+            self.total_requests += 1
+
     # Constructor
     def __init__(self, backends: List[Backend]):
         self._transport = Client()
@@ -65,7 +69,7 @@ class LoadBalancer(BaseTransport):
 
     # Private Methods
     def _check_throttling(self):
-        min_datetime = datetime(MINYEAR, 1, 1, tzinfo=tzutc())
+        min_datetime = datetime(MINYEAR, 1, 1, tzinfo = tzutc())
 
         for backend in self.backends:
             if backend.is_throttling and datetime.now(tzutc()) >= backend.retry_after:
@@ -128,14 +132,13 @@ class LoadBalancer(BaseTransport):
 
         delay = int((soonest_retry_after - datetime.now(timezone.utc)).total_seconds()) + 1     # Add a 1 second buffer to ensure we don't retry too early
         print(f"{datetime.now()}:      Soonest Retry After: {soonest_backend} - {str(delay)} second(s)")
-
         return delay
 
     def _return_429(self):
         print(f"{datetime.now()}:   No backend available!")
         retry_after = str(self._get_soonest_retry_after())
         print(f"{datetime.now()}:   Returning HTTP 429 with Retry-After header value of {retry_after} second(s).")
-        return Response(429, content='', headers={'Retry-After': retry_after})
+        return Response(429, content = '', headers = {'Retry-After': retry_after})
 
     # Public Methods
     def handle_request(self, request):
@@ -149,8 +152,9 @@ class LoadBalancer(BaseTransport):
             if backend_index == -1:
                 return self._return_429()
 
-            # Update URL and host header
-            request.url = request.url.copy_with(host=self.backends[backend_index].host)
+            # Modify the request. Note that only the URL and Host header are being modified on the original request object. We make the smallest incision possible to avoid side effects.
+            # Update URL and host header as both must match the backend server.
+            request.url = request.url.copy_with(host = self.backends[backend_index].host)
             headers = request.headers.copy()    # Create a mutable copy of the headers
             headers['host'] = self.backends[backend_index].host
             request.headers = headers           # Assign the modified headers back to request.headers
@@ -177,7 +181,7 @@ class LoadBalancer(BaseTransport):
 
                 backend = self.backends[backend_index]
                 backend.is_throttling = True
-                backend.retry_after = datetime.now(tzutc()) + timedelta(seconds=retry_after)
+                backend.retry_after = datetime.now(tzutc()) + timedelta(seconds = retry_after)
                 self._get_remaining_backends()
                 continue
 
