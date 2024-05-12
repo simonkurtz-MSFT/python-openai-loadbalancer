@@ -6,9 +6,9 @@ TL;DR! How do I [start](#getting-started)?
 
 Many AI workloads require using more than one Azure OpenAI instance to prioritize Provisioned Throughput Units (PTUs) and insulate themselves from timeouts. In having worked with customers on Azure OpenAI implementations, there are a few common, desired configurations:
 
-1. Use of multiple consumption instances with a round-robin distribution.
-1. Prioritize exhaustion of all tokens in a PTU instance with a fallback onto multiple consumption instances.
-1. Tiered prioritization of multiple consumption instances (e.g. use instances first that are geographically closer)
+- Distribution of requests over multiple consumption instances to mitigate throttling.
+- Prioritize exhaustion of all tokens in a PTU instance with a fallback onto multiple consumption instances.
+- Tiered prioritization of multiple consumption instances (e.g. use instances first that are geographically closer).
 
 While the [OpenAI Python API library](https://github.com/openai/openai-python) respects HTTP 429 and automatically retries after the requested wait period, the library is not set up to support the aforementioned customer desires. The library does, however, allow for the injection of custom httpx clients. This gave rise to this project.
 
