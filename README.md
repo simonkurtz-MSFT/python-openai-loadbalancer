@@ -92,9 +92,11 @@ Requests are made to the highest priority backend that is available. For example
 
 ### Across Multiple Backends of Same Priority
 
-There is no likelihood of a uniform distribution across available endpoints when running multiple python workers in parallel. The selection is randomized.
-
 In the single-requestor model, the distribution of attempts over available backends should be fairly uniform for backends of the same priority.
+
+There is no likelihood of a uniform distribution across available endpoints when running multiple python workers in parallel. In the below example, each terminal is executing 20 requests over two Azure OpenAI instances, both set up with the lowest of tokens-per-minute setting. Available backends are selected randomly (see the first request in each terminal). No sharing of data between the two terminals exists. Recovery takes place, when possible; otherwise, an HTTP 429 is returned to the OpenAI Python API library.
+
+![Parallel Execution](./assets/parallel-execution.png)
 
 ## Backoff & Retries
 
