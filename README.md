@@ -55,16 +55,16 @@ I started with a single0requestor model to experiment with the algorithm to sele
 1. Clone the repo.
 1. Open the cloned repo folder in VS Code.
 1. Open a terminal session in VS Code.
-1. Run `.\setup-python.ps1` to prepare the python environment.
+1. Run [setup-python.ps1](./setup-python.ps1) to prepare the python environment.
 
 ### Configuration
 
 For the load-balanced approach, please use the same model across all instances.
 
-1. Open `.\aoai.py`.
+1. Open [aoai.py](./aoai.py).
 1. Replace `<your-aoai-model>` with the Azure OpenAI model.
 1. Replace `<your-aoai-instance>` with the primary/single Azure OpenAI instance.
-1. Replace `<your-aoai-instance-1>`, `<your-aoai-instance-2>`, `<your-aoai-instance-3>` with all the Azure OpenAI instances you want to load-balance across. See [Load Balancer Configuration](#load-balancer-configuration) for details.
+1. Replace `<your-aoai-instance-1>`, `<your-aoai-instance-2>`, `<your-aoai-instance-3>` with all the Azure OpenAI instances you want to load-balance across. Delete entries you don't need. See [Load Balancer Configuration](#load-balancer-configuration) for details.
 1. Replace the value for variable `num_of_requests` with the number of requests you wish to execute.
 
 ### Credentials
@@ -77,8 +77,8 @@ When running in Azure, it's advised to use managed identities.
 
 ## Execution
 
-1. Run `.\python-aoai.ps1` just once to see it execute properly.
-1. Run `.\python-aoai.ps1` concurrently in multiple terminals to simulate parallel requests from multiple python workers.
+1. Run [python-aoai.ps1](.\python-aoai.ps1) just once to see it execute properly.
+1. Run [python-aoai.ps1](.\python-aoai.ps1) concurrently in multiple terminals to simulate parallel requests from multiple python workers.
 
 ## Distribution of Requests
 
