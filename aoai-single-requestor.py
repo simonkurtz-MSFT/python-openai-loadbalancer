@@ -45,14 +45,14 @@ def send_request(num_of_requests, azure_endpoint: str):
 # Load-balanced Azure OpenAI Implementation (Multiple Backends)
 def send_loadbalancer_request(num_of_requests, backends: Backend):
     try:
-        # Instantiate the LoadBalancer class and create a new https client with the LoadBalancer as the injected transport
+        # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
         lb = LoadBalancer(backends)
 
         client = AzureOpenAI(
-            azure_endpoint = f"https://{backends[0].host}",   # Must be seeded, so we use the first host. It will get overwritten by the LoadBalancer
+            azure_endpoint = f"https://{backends[0].host}",   # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
             api_version = "2024-04-01-preview",
-            http_client = DefaultHttpxClient(transport=lb)    # Inject the LoadBalancer as the transport in a new default httpx client
+            http_client = DefaultHttpxClient(transport = lb)  # Inject the load balancer as the transport in a new default httpx client
         )
 
         for i in range(num_of_requests):
@@ -72,7 +72,7 @@ def send_loadbalancer_request(num_of_requests, backends: Backend):
                 print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
                 traceback.print_exc()
 
-        # Print LoadBalancer Statistics
+        # Print load balancer statistics
         lb.statistics.print()
 
     except NotFoundError as e:
