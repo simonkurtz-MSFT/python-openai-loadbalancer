@@ -1,6 +1,6 @@
 # This is the original work that targeted only a single python worker (no parallelism). This is an unlikely scenario for production, but I decided to keep it in the repo.
 
-from azure.identity import DefaultAzureCredential # type: ignore
+from azure.identity import DefaultAzureCredential
 from datetime import datetime
 from openai import AzureOpenAI, DefaultHttpxClient, NotFoundError
 from load_balancer_single_requestor import LoadBalancer, Backend
@@ -43,7 +43,7 @@ def send_request(num_of_requests, azure_endpoint: str):
         traceback.print_exc()
 
 # Load-balanced Azure OpenAI Implementation (Multiple Backends)
-def send_loadbalancer_request(num_of_requests, backends: Backend):
+def send_loadbalancer_request(num_of_requests, backends: List[Backend]):
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
         lb = LoadBalancer(backends)
