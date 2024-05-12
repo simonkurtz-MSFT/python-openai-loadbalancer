@@ -31,7 +31,7 @@ This project would not have been possible without the incredible work that [@and
 
 ## Current Limitations
 
-- Python OpenAI Load Balancer is primarily target for Azure OpenAI; however, it can be expanded upon to serve OpenAI endpoints as well.
+- The Python OpenAI Load Balancer is primarily targeted at Azure OpenAI, but it can be expanded to serve other OpenAI endpoints as well.
 - Async is not yet supported.
 - My development setup is based on Windows and Powershell. I have not tried this with Linux.
 
@@ -42,11 +42,11 @@ It's also good to have some knowledge of authentication and identities.
 
 ## Authentication
 
-Locally, you can log into Azure via the CLI and the steps below and use the `AzureDefaultCredential` (what I use in my example). In Azure, you'd want to use a managed identity for your application. It's best to avoid using the Azure OpenAI instances' keys as that could a) accidentally leave credentials in your source code, and b) the keys are different for each instance, which would probably require expanding upon the `Backends` class. Best to just avoid keys.
+Locally, you can log into Azure via the CLI and the steps below and use the `AzureDefaultCredential` (what I use in my example). When deploying this application in Azure, it's recommended to use a managed identity for authentication. It's best to avoid using the Azure OpenAI instances' keys as that could a) accidentally leave credentials in your source code, and b) the keys are different for each instance, which would probably require expanding upon the `Backends` class. Best to just avoid keys.
 
 ## Single Requestor Model
 
-I started with a single0requestor model to experiment with the algorithm to select backends. This is nota model that would typically be employed as almost every workload would run multiple python workers in parallel. Nevertheless, I left the files in the repo with the `single-requestor` suffix.
+I started with a single-requestor model to experiment with the algorithm to select backends. This model is not typically used, as most workloads run multiple Python workers in parallel. Nevertheless, I left the files in the repo with the `single-requestor` suffix.
 
 ## Getting Started
 
@@ -62,14 +62,14 @@ I started with a single0requestor model to experiment with the algorithm to sele
 For the load-balanced approach, please use the same model across all instances.
 
 1. Open [aoai.py](./aoai.py).
-1. Replace `<your-aoai-model>` with the Azure OpenAI model.
+1. Replace `<your-aoai-model>` with the name of your Azure OpenAI model.
 1. Replace `<your-aoai-instance>` with the primary/single Azure OpenAI instance.
 1. Replace `<your-aoai-instance-1>`, `<your-aoai-instance-2>`, `<your-aoai-instance-3>` with all the Azure OpenAI instances you want to load-balance across. Delete entries you don't need. See [Load Balancer Configuration](#load-balancer-configuration) for details.
 1. Replace the value for variable `num_of_requests` with the number of requests you wish to execute.
 
 ### Credentials
 
-Locally, your AzuredefaultCredential is used. Each Azure OpenAI instance must be set up with `Cognitive Services OpenAI User` role assignment for your Azure credential (your identity post-login). This ensures that you can use your credential across all Azure OpenAI instances.
+Locally, your `AzureDefaultCredential` is used. Each Azure OpenAI instance must be configured with the `Cognitive Services OpenAI` User role for your Azure credential (the identity you use after logging in). This ensures that you can use your credential across all Azure OpenAI instances.
 
 When running in Azure, it's advised to use managed identities.
 
@@ -77,12 +77,14 @@ When running in Azure, it's advised to use managed identities.
 
 ## Execution
 
-1. Run [python-aoai.ps1](./python-aoai.ps1) just once to see it execute properly.
+1. Initially, [python-aoai.ps1](./python-aoai.ps1) once to ensure it executes correctly.
 1. Run [python-aoai.ps1](./python-aoai.ps1) concurrently in multiple terminals to simulate parallel requests from multiple python workers.
 
 ## Distribution of Requests
 
 ### Across Different Priorities
+
+Requests are made to the highest priority backend that is available. For example:
 
 - Priority 1, when available, will always supersede priority 2.
 - Priority 2, when available, will always supersede an unavailable priority 1.
@@ -97,9 +99,9 @@ In the single-requestor model, the distribution of attempts over available backe
 ## Backoff & Retries
 
 When no backends are available (e.g. all timed out), Python OpenAI Load Balancer returns the soonest retry in seconds determined based on the `retry_after` value on each backend.
-You may see in the logs that there is a curious delay after the load balancer returns and the next request comes in. The OpenAI Python library [uses a short exponential backoff](https://github.com/openai/openai-python?tab=readme-ov-file#retries) in addition to the `Retry-After` header value. This seems to be a bit overkill.
+You may notice a delay in the logs between when the load balancer returns and when the next request is made. In addition to the `Retry-After` header value, the OpenAI Python library [uses a short exponential backoff](https://github.com/openai/openai-python?tab=readme-ov-file#retries).
 
-In this log excerpt, we see that all three backends are timing out. As the standard behavior returns an HTTP 429 from a single backend, we do the same here with the load-balanced approach. This allows the OpenAI Pythong library to handle the HTTP 429 that it believes it received from a singular backend.
+In this log excerpt, we see that all three backends are timing out. As the standard behavior returns an HTTP 429 from a single backend, we do the same here with the load-balanced approach. This allows the OpenAI Python library to handle the HTTP 429 that it believes it received from a singular backend.
 The wait periods are 44 seconds (westus), 4 seconds (eastus), and 7 seconds (southcentralus) in this log. Our logic determines that eastus will become available soonest. Therefore, we return a `Retry-After` header with a value of `4`. The OpenAI Python library then adds its exponential backoff (~2 seconds here).
 
 ```text
