@@ -32,7 +32,6 @@ This project would not have been possible without the incredible work that [@and
 ## Current Limitations
 
 - The Python OpenAI Load Balancer is primarily targeted at Azure OpenAI, but it can be expanded to serve other OpenAI endpoints as well.
-- Async is not yet supported.
 - My development setup is based on Windows and Powershell. I have not tried this with Linux.
 
 ## Prerequisites
