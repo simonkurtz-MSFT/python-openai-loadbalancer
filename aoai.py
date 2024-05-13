@@ -13,7 +13,7 @@ import traceback
 
 class TestExecutions:
     def __init__(self):
-        self.Standard                   = True
+        self.standard                   = True
         self.load_balanced              = True
         self.async_load_balanced        = True
         self.stream_load_balanced       = True
@@ -272,7 +272,7 @@ for backend in backends:
         raise ValueError(f"Backend {backend.host} must be set to a valid endpoint.")
 
 # 1: Standard requests to one AOAI backend
-if test_executions.Standard:
+if test_executions.standard:
     print(f"\nStandard Requests\n{'-' * 17}\n")
     start_time = time.time()
     send_request(NUM_OF_REQUESTS, AZURE_ENDPOINT)
@@ -310,7 +310,7 @@ if test_executions.async_stream_load_balanced:
 print(f"\n{'*' * 100}\n")
 print(f"Number of requests                              : {NUM_OF_REQUESTS}\n")
 
-if test_executions.Standard:
+if test_executions.standard:
     print(f"Single instance operation duration              : {end_time - start_time:.2f} seconds")
 if test_executions.load_balanced:
     print(f"Load-balancer operation duration                : {lb_end_time - lb_start_time:.2f} seconds")
