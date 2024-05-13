@@ -29,11 +29,6 @@ Furthermore, while the load balancer handles retries across available backends, 
 
 This project would not have been possible without the incredible work that [@andredewes](https://github.com/andredewes) has done with his [Smart Load Balancing for OpenAI Endpoints and Azure API Management](https://github.com/Azure-Samples/openai-apim-lb). If you use Azure API Management in your infrastructure, I highly recommend you consider his policy.
 
-## Current Limitations
-
-- The Python OpenAI Load Balancer is primarily targeted at Azure OpenAI, but it can be expanded to serve other OpenAI endpoints as well.
-- My development setup is based on Windows and Powershell. I have not tried this with Linux.
-
 ## Prerequisites
 
 It helps to have some familiarity with how the [OpenAI Python API library](https://github.com/openai/openai-python) works. If you have used it before, then the code in `aoai.py` here will look very familiar to you.
