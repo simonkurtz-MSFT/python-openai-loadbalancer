@@ -111,9 +111,8 @@ class AsyncLoadBalancer(BaseLoadBalancer):
             # Modify the request. Note that only the URL and Host header are being modified on the original request object. We make the smallest incision possible to avoid side effects.
             # Update URL and host header as both must match the backend server.
             request.url = request.url.copy_with(host = self.backends[backend_index].host)
-            headers = request.headers.copy()    # Create a mutable copy of the headers
-            headers['host'] = self.backends[backend_index].host
-            request.headers = headers           # Assign the modified headers back to request.headers
+            request.headers = request.headers.copy()    # Create a mutable copy of the headers
+            request.headers['host'] = self.backends[backend_index].host
 
             # Send the request to the backend
             try:
