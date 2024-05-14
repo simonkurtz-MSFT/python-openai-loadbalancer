@@ -1,7 +1,7 @@
 from azure.identity import DefaultAzureCredential
 from datetime import datetime
 from openai import AzureOpenAI, AsyncAzureOpenAI, DefaultHttpxClient, DefaultAsyncHttpxClient, NotFoundError
-from load_balancer import AsyncLoadBalancer, LoadBalancer, Backend
+from src.openai_loadbalancer_simon_kurtz.openai_load_balancer import AsyncLoadBalancer, LoadBalancer, Backend
 from typing import List
 import asyncio
 import time
