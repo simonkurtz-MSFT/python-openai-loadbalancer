@@ -84,6 +84,10 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
 
 As these are the only changes to the [OpenAI Python API library](https://github.com/openai/openai-python) implementation, simply execute your python code.
 
+### Logging
+
+OpenAI Priority Load Balancer uses Python's [logging](https://docs.python.org/3/library/logging.html) module. The name of the logger is `openai-priority-loadbalancer`.
+
 ## Distribution of Requests
 
 ### Across Different Priorities

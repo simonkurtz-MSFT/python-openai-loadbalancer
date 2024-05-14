@@ -4,6 +4,7 @@ from openai import AzureOpenAI, AsyncAzureOpenAI, DefaultHttpxClient, DefaultAsy
 from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncLoadBalancer, LoadBalancer, Backend
 from typing import List
 import asyncio
+import logging
 import time
 import traceback
 
@@ -258,9 +259,16 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int, backends:
 
 ##########################################################################################################################################################
 
-test_executions = TestExecutions()
+# >>> TEST HARNESS <<<
 
-# Ensure that variables are set
+# Set up the logger: https://www.machinelearningplus.com/python/python-logging-guide/
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(module)-30s %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# Ensure that variables are set.
 if MODEL == "<your-aoai-model>":
     raise ValueError("MODEL must be set to a valid AOAI model.")
 
@@ -270,6 +278,9 @@ if "xxxxxxxx" in AZURE_ENDPOINT:
 for backend in backends:
     if "xxxxxxxx" in backend.host:
         raise ValueError(f"Backend {backend.host} must be set to a valid endpoint.")
+
+# Instantiate the TestExecutions object to understand which tests to run.
+test_executions = TestExecutions()
 
 # 1: Standard requests to one AOAI backend
 if test_executions.standard:

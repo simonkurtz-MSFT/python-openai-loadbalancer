@@ -2,6 +2,7 @@ from datetime import datetime, MINYEAR, MAXYEAR, timedelta, timezone
 from dateutil.tz import tzutc
 from httpx import Client, Response, BaseTransport, AsyncBaseTransport, AsyncClient
 from typing import List
+import logging
 import random
 import traceback
 
@@ -23,6 +24,7 @@ class BaseLoadBalancer():
         self.backends = backends
         self._backend_index = -1
         self._remaining_backends = 1
+        self._log = logging.getLogger("openai-priority-loadbalancer")     # https://www.loggly.com/ultimate-guide/python-logging-basics/
 
     # "Protected" Methods
     def _check_throttling(self):
@@ -32,7 +34,7 @@ class BaseLoadBalancer():
             if backend.is_throttling and datetime.now(tzutc()) >= backend.retry_after:
                 backend.is_throttling = False
                 backend.retry_after = min_datetime
-                print(f"{datetime.now()}:   Backend {backend.host} is no longer throttling.")
+                self._log.info(f"Backend {backend.host} is no longer throttling.")
 
     def _get_backend_index(self):
         # This is the main logic to pick the backend to be used
@@ -82,13 +84,13 @@ class BaseLoadBalancer():
                 soonest_backend = backend.host
 
         delay = int((soonest_retry_after - datetime.now(timezone.utc)).total_seconds()) + 1     # Add a 1 second buffer to ensure we don't retry too early
-        print(f"{datetime.now()}:   Soonest Retry After: {soonest_backend} - {str(delay)} second(s)")
+        self._log.info(f"Soonest Retry After: {soonest_backend} - {str(delay)} second(s)")
         return delay
 
     def _return_429(self):
-        print(f"{datetime.now()}:   No backend available!")
+        self._log.warning("No backend available!")
         retry_after = str(self._get_soonest_retry_after())
-        print(f"{datetime.now()}:   Returning HTTP 429 with Retry-After header value of {retry_after} second(s).")
+        self._log.info(f"Returning HTTP 429 with Retry-After header value of {retry_after} second(s).")
         return Response(429, content = '', headers={'Retry-After': retry_after})
 
 class AsyncLoadBalancer(BaseLoadBalancer):
@@ -118,11 +120,12 @@ class AsyncLoadBalancer(BaseLoadBalancer):
             try:
                 response = await self._transport.send(request)
             except Exception as e:
-                traceback.print_exc()
+                self._log.error(traceback.print_exc())
 
             if response is not None and (response.status_code == 429 or response.status_code >= 500):
                 # If the server is throttling or there's a server error, retry with a different server
-                print(f"{datetime.now()}:   Request sent to server: {request.url}, Status Code: {response.status_code} - FAIL")
+                self._log.info(f"Request sent to server: {request.url}, Status Code: {response.status_code} - FAIL")
+
                 retry_after = int(response.headers.get('Retry-After', '-1'))
 
                 if retry_after == -1:
@@ -131,7 +134,7 @@ class AsyncLoadBalancer(BaseLoadBalancer):
                 if retry_after == -1:
                     retry_after = int(response.headers.get('x-ratelimit-reset-requests', '10'))
 
-                print(f"{datetime.now()}:   Backend {self.backends[backend_index].host} is throttling. Retry after {retry_after} second(s).")
+                self._log.info(f"Backend {self.backends[backend_index].host} is throttling. Retry after {retry_after} second(s).")
 
                 backend = self.backends[backend_index]
                 backend.is_throttling = True
@@ -141,13 +144,13 @@ class AsyncLoadBalancer(BaseLoadBalancer):
 
             elif response is not None and (response.status_code >= 200 and response.status_code <= 399):
                 # Successful requests
-                print(f"{datetime.now()}:   Request sent to server: {request.url}, Status code: {response.status_code}")
+                self._log.info(f"Request sent to server: {request.url}, Status code: {response.status_code}")
                 self.backends[backend_index].successful_call_count += 1
                 break
 
             else:
                 # Would likely be a 4xx error other than 429
-                print(f"{datetime.now()}:   Request sent to server: {request.url}, Status code: {response.status_code} - FAIL")
+                self._log.warning(f"Request sent to server: {request.url}, Status code: {response.status_code} - FAIL")
                 break
 
         if self._remaining_backends == 0:
@@ -183,11 +186,12 @@ class LoadBalancer(BaseLoadBalancer):
             try:
                 response = self._transport.send(request)
             except Exception as e:
-                traceback.print_exc()
+                self._log.error(traceback.print_exc())
 
             if response is not None and (response.status_code == 429 or response.status_code >= 500):
                 # If the server is throttling or there's a server error, retry with a different server
-                print(f"{datetime.now()}:   Request sent to server: {request.url}, Status Code: {response.status_code} - FAIL")
+                self._log.warning(f"Request sent to server: {request.url}, Status Code: {response.status_code} - FAIL")
+
                 retry_after = int(response.headers.get('Retry-After', '-1'))
 
                 if retry_after == -1:
@@ -196,7 +200,7 @@ class LoadBalancer(BaseLoadBalancer):
                 if retry_after == -1:
                     retry_after = int(response.headers.get('x-ratelimit-reset-requests', '10'))
 
-                print(f"{datetime.now()}:   Backend {self.backends[backend_index].host} is throttling. Retry after {retry_after} second(s).")
+                self._log.info(f"Backend {self.backends[backend_index].host} is throttling. Retry after {retry_after} second(s).")
 
                 backend = self.backends[backend_index]
                 backend.is_throttling = True
@@ -206,13 +210,13 @@ class LoadBalancer(BaseLoadBalancer):
 
             elif response is not None and (response.status_code >= 200 and response.status_code <= 399):
                 # Successful requests
-                print(f"{datetime.now()}:   Request sent to server: {request.url}, Status code: {response.status_code}")
+                self._log.info(f"Request sent to server: {request.url}, Status code: {response.status_code}")
                 self.backends[backend_index].successful_call_count += 1
                 break
 
             else:
                 # Would likely be a 4xx error other than 429
-                print(f"{datetime.now()}:   Request sent to server: {request.url}, Status code: {response.status_code} - FAIL")
+                self._log.warning(f"Request sent to server: {request.url}, Status code: {response.status_code} - FAIL")
                 break
 
         if self._remaining_backends == 0:
