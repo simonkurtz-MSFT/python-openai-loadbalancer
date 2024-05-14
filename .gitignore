@@ -1,2 +1,5 @@
 __pycache__
 python_env
+dist
+build
+*.egg-info

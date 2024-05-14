@@ -3,7 +3,7 @@
 from azure.identity import DefaultAzureCredential
 from datetime import datetime
 from openai import AzureOpenAI, DefaultHttpxClient, NotFoundError
-from load_balancer_single_requestor import LoadBalancer, Backend
+from openai_load_balancer_single_requestor import LoadBalancer, Backend
 from typing import List
 import time
 import traceback
