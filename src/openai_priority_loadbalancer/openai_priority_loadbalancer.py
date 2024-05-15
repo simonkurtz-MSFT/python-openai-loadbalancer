@@ -1,12 +1,16 @@
-from datetime import datetime, MINYEAR, MAXYEAR, timedelta, timezone
-from dateutil.tz import tzutc
-from httpx import Client, Response, BaseTransport, AsyncBaseTransport, AsyncClient
-from typing import List
+"""Module providing a prioritized load-balancing for Azure OpenAI."""
+
 import logging
 import random
 import traceback
+from typing import List
+from datetime import datetime, MAXYEAR, MINYEAR, timedelta, timezone
+from dateutil.tz import tzutc
+from httpx import AsyncClient, Client, Response
 
 class Backend:
+    """Class representing a backend object used with Azure OpenAI, etc."""
+
     # Constructor
     def __init__(self, host: str, priority: int):
         self.host = host
@@ -18,6 +22,8 @@ class Backend:
 # Reference design at https://github.com/encode/httpx/blob/master/httpx/_transports/base.py
 # BaseLoadBalancer providing functionality to both synchronous and asynchronous load balancers
 class BaseLoadBalancer():
+    """Logically abstract Base Load Balancer class that should be inherited"""
+
     # Constructor
     def __init__(self, transport, backends: List[Backend]):
         self._transport = transport
@@ -34,7 +40,7 @@ class BaseLoadBalancer():
             if backend.is_throttling and datetime.now(tzutc()) >= backend.retry_after:
                 backend.is_throttling = False
                 backend.retry_after = min_datetime
-                self._log.info(f"Backend {backend.host} is no longer throttling.")
+                self._log.info("Backend %s is no longer throttling.", backend.host)
 
     def _get_backend_index(self):
         # This is the main logic to pick the backend to be used
@@ -42,17 +48,15 @@ class BaseLoadBalancer():
         available_backends = []
 
         # Evaluate all defined backends for availability and priority, leaving only the most-desirable available backends from which to select.
-        for i in range(len(self.backends)):
-            backend = self.backends[i]
-
+        for i, backend in enumerate(self.backends):
             if not backend.is_throttling:
-                backendPriority = backend.priority
+                backend_priority = backend.priority
 
-                if backendPriority < selected_priority:
-                    selected_priority = backendPriority
+                if backend_priority < selected_priority:
+                    selected_priority = backend_priority
                     available_backends.clear()
                     available_backends.append(i)
-                elif backendPriority == selected_priority:
+                elif backend_priority == selected_priority:
                     available_backends.append(i)
 
         if len(available_backends) == 1:
@@ -85,17 +89,17 @@ class BaseLoadBalancer():
                 soonest_backend = backend.host
 
         delay = int((soonest_retry_after - datetime.now(timezone.utc)).total_seconds()) + 1     # Add a 1 second buffer to ensure we don't retry too early
-        self._log.info(f"Soonest Retry After: {soonest_backend} - {str(delay)} second(s)")
+        self._log.info("Soonest Retry After: %s - %s second(s)", soonest_backend, str(delay))
         return delay
 
     def _handle_200_399_response(self, request, response, backend_index):
         # Successful requests
-        self._log.info(f"Request sent to server: {request.url}, Status code: {response.status_code}")
+        self._log.info("Request sent to server: %s, Status code: %s", request.url, response.status.code)
         self.backends[backend_index].successful_call_count += 1
 
     def _handle_429_5xx_response(self, request, response, backend_index):
         # If the server is throttling or there's a server error, retry with a different server
-        self._log.info(f"Request sent to server: {request.url}, Status Code: {response.status_code} - FAIL")
+        self._log.info("Request sent to server: %s, Status code: %s - FAIL", request.url, response.status.code)
 
         retry_after = int(response.headers.get('Retry-After', '-1'))
 
@@ -105,7 +109,7 @@ class BaseLoadBalancer():
         if retry_after == -1:
             retry_after = int(response.headers.get('x-ratelimit-reset-requests', '10'))
 
-        self._log.info(f"Backend {self.backends[backend_index].host} is throttling. Retry after {retry_after} second(s).")
+        self._log.info("Backend %s is throttling. Retry after %s second(s).", self.backends[backend_index].host, retry_after)
 
         backend = self.backends[backend_index]
         backend.is_throttling = True
@@ -114,7 +118,7 @@ class BaseLoadBalancer():
 
     def _handle_4xx_response(self, request, response):
         # Would likely be a 4xx error other than 429
-        self._log.warning(f"Request sent to server: {request.url}, Status code: {response.status_code} - FAIL")
+        self._log.warning("Request sent to server: %s, Status code: %s - FAIL", request.url, response.status_code)
 
     def _modify_request(self, request, backend_index):
         # Modify the request. Note that only the URL and Host header are being modified on the original request object. We make the smallest incision possible to avoid side effects.
@@ -126,16 +130,20 @@ class BaseLoadBalancer():
     def _return_429(self):
         self._log.warning("No backend available!")
         retry_after = str(self._get_soonest_retry_after())
-        self._log.info(f"Returning HTTP 429 with Retry-After header value of {retry_after} second(s).")
+        self._log.info("Returning HTTP 429 with Retry-After header value of %s second(s).", retry_after)
         return Response(429, content = '', headers={'Retry-After': retry_after})
 
 class AsyncLoadBalancer(BaseLoadBalancer):
+    """Asynchronous Load Balancer class based on BaseLoadBalancer"""
+
     # Constructor
     def __init__(self, backends: List[Backend]):
         super().__init__(AsyncClient(), backends)
 
     # Public Methods
     async def handle_async_request(self, request):
+        """Handles an asynchronous request by issuing an asynchronous request to an available backed."""
+
         self._check_throttling()
         self._get_remaining_backends()
         response = None
@@ -153,7 +161,7 @@ class AsyncLoadBalancer(BaseLoadBalancer):
             # 3) Send the request to the selected backend (via async)
             try:
                 response = await self._transport.send(request)
-            except Exception as e:
+            except Exception:
                 self._log.error(traceback.print_exc())
 
             # 4) Evaluate the response from the backend
@@ -175,12 +183,16 @@ class AsyncLoadBalancer(BaseLoadBalancer):
         return response
 
 class LoadBalancer(BaseLoadBalancer):
+    """Synchronous Load Balancer class based on BaseLoadBalancer"""
+
     # Constructor
     def __init__(self, backends: List[Backend]):
         super().__init__(Client(), backends)
 
     # Public Methods
     def handle_request(self, request):
+        """Handles a synchronous request by issuing a request to an available backed."""
+
         self._check_throttling()
         self._get_remaining_backends()
         response = None
@@ -198,7 +210,7 @@ class LoadBalancer(BaseLoadBalancer):
             # 3) Send the request to the selected backend
             try:
                 response = self._transport.send(request)
-            except Exception as e:
+            except Exception:
                 self._log.error(traceback.print_exc())
 
             # 4) Evaluate the response from the backend
