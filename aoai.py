@@ -1,18 +1,23 @@
-from azure.identity import DefaultAzureCredential
-from datetime import datetime
-from openai import AzureOpenAI, AsyncAzureOpenAI, DefaultHttpxClient, DefaultAsyncHttpxClient, NotFoundError
-from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncLoadBalancer, LoadBalancer, Backend
-from typing import List
+"""Module providing an OpenAI Priority Load Balancer test harness."""
+
 import asyncio
 import logging
 import time
 import traceback
+from typing import List
+from azure.identity import DefaultAzureCredential
+from datetime import datetime
+from openai import AzureOpenAI, AsyncAzureOpenAI, DefaultAsyncHttpxClient, DefaultHttpxClient, NotFoundError
+from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncLoadBalancer, LoadBalancer, Backend
+
 
 ##########################################################################################################################################################
 
 # >>> Only make changes to TEST_EXECUTIONS, NUM_OF_REQUESTS, MODEL, AZURE_ENDPOINT, and the backends list <<<
 
 class TestExecutions:
+    """Class representing the tests that can be performed"""
+
     def __init__(self):
         self.standard                   = True
         self.load_balanced              = True
@@ -32,12 +37,16 @@ backends: List[Backend] = [
 ##########################################################################################################################################################
 
 def token_provider():
+    """Function to provide the Azure AD token for the Azure OpenAI client."""
+
     credential = DefaultAzureCredential()
     token = credential.get_token('https://cognitiveservices.azure.com/.default')
     return token.token
 
 # Standard Azure OpenAI Implementation (One Backend)
 def send_request(num_of_requests, azure_endpoint: str):
+    """Function to send standard requests to the Azure OpenAI API."""
+
     try:
         client = AzureOpenAI(
             azure_endpoint = azure_endpoint,
@@ -66,7 +75,9 @@ def send_request(num_of_requests, azure_endpoint: str):
         traceback.print_exc()
 
 # Load-balanced Azure OpenAI Implementation (Multiple Backends)
-def send_loadbalancer_request(num_of_requests: int, backends: List[Backend]):
+def send_loadbalancer_request(num_of_requests: int):
+    """Function to send load-balanced requests to the Azure OpenAI API."""
+
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
         lb = LoadBalancer(backends)
@@ -91,7 +102,7 @@ def send_loadbalancer_request(num_of_requests: int, backends: List[Backend]):
                 )
 
                 print(f"{datetime.now()}:\n{response}\n\n\n")
-            except Exception as e:
+            except Exception:
                 print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
                 traceback.print_exc()
 
@@ -102,7 +113,9 @@ def send_loadbalancer_request(num_of_requests: int, backends: List[Backend]):
         print("Exception:", vars(e))
         traceback.print_exc()
 
-async def send_async_loadbalancer_request(num_of_requests: int, backends: List[Backend]):
+async def send_async_loadbalancer_request(num_of_requests: int):
+    """Function to send load-balanced requests to the Azure OpenAI API."""
+
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
         lb = AsyncLoadBalancer(backends)
@@ -127,7 +140,7 @@ async def send_async_loadbalancer_request(num_of_requests: int, backends: List[B
                 )
 
                 print(f"{datetime.now()}:\n{response}\n\n\n")
-            except Exception as e:
+            except Exception:
                 print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
                 traceback.print_exc()
 
@@ -139,7 +152,9 @@ async def send_async_loadbalancer_request(num_of_requests: int, backends: List[B
         traceback.print_exc()
 
 # Reference design: https://cookbook.openai.com/examples/how_to_stream_completions
-def send_stream_loadbalancer_request(num_of_requests: int, backends: List[Backend]):
+def send_stream_loadbalancer_request(num_of_requests: int):
+    """Function to send load-balanced streaming requests to the Azure OpenAI API."""
+
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
         lb = LoadBalancer(backends)
@@ -155,7 +170,7 @@ def send_stream_loadbalancer_request(num_of_requests: int, backends: List[Backen
             print(f"{datetime.now()}: Async LoadBalancer request {i+1}/{num_of_requests}")
 
             try:
-                start_time = time.time()
+                stream_start_time = time.time()
 
                 response = client.chat.completions.create(
                     model = MODEL,
@@ -171,8 +186,8 @@ def send_stream_loadbalancer_request(num_of_requests: int, backends: List[Backen
                 collected_messages = []
 
                 # Iterate through the stream of events
-                for chunk in response:
-                    chunk_time = time.time() - start_time  # calculate the time delay of the chunk
+                for chunk in response:  # pylint: disable=E1133
+                    chunk_time = time.time() - stream_start_time  # calculate the time delay of the chunk
                     collected_chunks.append(chunk)  # save the event response
 
                     if chunk.choices and chunk.choices[0] and chunk.choices[0].delta and chunk.choices[0].delta.content:
@@ -184,9 +199,9 @@ def send_stream_loadbalancer_request(num_of_requests: int, backends: List[Backen
                 print(f"\nFull response received {chunk_time:.2f} seconds after request.")
                 collected_messages = [m for m in collected_messages if m is not None]   # Clean None in collected_messages
                 full_reply_content = ''.join(collected_messages)
-                print(f"\nFull conversation received: {full_reply_content}")
+                print(f"\nFull conversation received: {full_reply_content}\n\n")
 
-            except Exception as e:
+            except Exception:
                 print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
                 traceback.print_exc()
 
@@ -198,7 +213,9 @@ def send_stream_loadbalancer_request(num_of_requests: int, backends: List[Backen
         traceback.print_exc()
 
 # Reference design: https://cookbook.openai.com/examples/how_to_stream_completions
-async def send_async_stream_loadbalancer_request(num_of_requests: int, backends: List[Backend]):
+async def send_async_stream_loadbalancer_request(num_of_requests: int):
+    """Function to send load-balanced streaming requests to the Azure OpenAI API."""
+
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
         lb = AsyncLoadBalancer(backends)
@@ -214,7 +231,7 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int, backends:
             print(f"{datetime.now()}: Async LoadBalancer request {i+1}/{num_of_requests}")
 
             try:
-                start_time = time.time()
+                stream_start_time = time.time()
 
                 response = await client.chat.completions.create(
                     model = MODEL,
@@ -232,7 +249,7 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int, backends:
                 if response is not None:
                     # Iterate through the stream of events
                     async for chunk in response:
-                        chunk_time = time.time() - start_time  # calculate the time delay of the chunk
+                        chunk_time = time.time() - stream_start_time  # calculate the time delay of the chunk
                         collected_chunks.append(chunk)  # save the event response
 
                         if chunk.choices and chunk.choices[0] and chunk.choices[0].delta and chunk.choices[0].delta.content:
@@ -241,12 +258,12 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int, backends:
                             print(f"Message received {chunk_time:.2f} seconds after request: {chunk_message}")  # print the delay and text
 
                     # Print the time delay and text received
-                    print(f"\nFull response received {chunk_time:.2f} seconds after request")
+                    print(f"\nFull response received {chunk_time:.2f} seconds after request.")
                     collected_messages = [m for m in collected_messages if m is not None]   # Clean None in collected_messages
                     full_reply_content = ''.join(collected_messages)
-                    print(f"\nFull conversation received: {full_reply_content}")
+                    print(f"\nFull conversation received: {full_reply_content}\n\n")
 
-            except Exception as e:
+            except Exception:
                 print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
                 traceback.print_exc()
 
@@ -293,28 +310,28 @@ if test_executions.standard:
 if test_executions.load_balanced:
     print(f"\nLoad Balanced Requests\n{'-' * 22}\n")
     lb_start_time = time.time()
-    send_loadbalancer_request(NUM_OF_REQUESTS, backends)
+    send_loadbalancer_request(NUM_OF_REQUESTS)
     lb_end_time = time.time()
 
 # 3: Async Load-balanced requests to one or more AOAI backends
 if test_executions.async_load_balanced:
     print(f"\nAsync Load Balanced Requests\n{'-' * 28}\n")
     async_lb_start_time = time.time()
-    asyncio.run(send_async_loadbalancer_request(NUM_OF_REQUESTS, backends))
+    asyncio.run(send_async_loadbalancer_request(NUM_OF_REQUESTS))
     async_lb_end_time = time.time()
 
 # 4: Load-balanced streaming requests to one or more AOAI backends
 if test_executions.stream_load_balanced:
     print(f"\nStream Load Balanced Requests\n{'-' * 29}\n")
     stream_lb_start_time = time.time()
-    send_stream_loadbalancer_request(NUM_OF_REQUESTS, backends)
+    send_stream_loadbalancer_request(NUM_OF_REQUESTS)
     stream_lb_end_time = time.time()
 
 # 5: Async Load-balanced streaming requests to one or more AOAI backends
 if test_executions.async_stream_load_balanced:
     print(f"\nStream Async Load Balanced Requests\n{'-' * 35}\n")
     async_stream_lb_start_time = time.time()
-    asyncio.run(send_async_stream_loadbalancer_request(NUM_OF_REQUESTS, backends))
+    asyncio.run(send_async_stream_loadbalancer_request(NUM_OF_REQUESTS))
     async_stream_lb_end_time = time.time()
 
 # Statistics
