@@ -94,12 +94,12 @@ class BaseLoadBalancer():
 
     def _handle_200_399_response(self, request, response, backend_index):
         # Successful requests
-        self._log.info("Request sent to server: %s, Status code: %s", request.url, response.status.code)
+        self._log.info("Request sent to server: %s, Status code: %s", request.url, response.status_code)
         self.backends[backend_index].successful_call_count += 1
 
     def _handle_429_5xx_response(self, request, response, backend_index):
         # If the server is throttling or there's a server error, retry with a different server
-        self._log.info("Request sent to server: %s, Status code: %s - FAIL", request.url, response.status.code)
+        self._log.info("Request sent to server: %s, Status code: %s - FAIL", request.url, response.status_code)
 
         retry_after = int(response.headers.get('Retry-After', '-1'))
 
