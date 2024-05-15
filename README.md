@@ -64,6 +64,9 @@ Locally, your `AzureDefaultCredential` is used. Each Azure OpenAI instance must 
 When running in Azure, it's advised to use managed identities.
 
 1. Log in with `az login`.
+1. Set your subscription in which your Azure OpenAI assets reside: `az account set -s <name or id>`
+
+    *Missing this step may result in HTTP 400 errors for a tenant mismatch.*
 
 ## Execution
 
