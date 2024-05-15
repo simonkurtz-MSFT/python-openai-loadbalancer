@@ -5,8 +5,8 @@ import logging
 import time
 import traceback
 from typing import List
-from azure.identity import DefaultAzureCredential
 from datetime import datetime
+from azure.identity import DefaultAzureCredential
 from openai import AzureOpenAI, AsyncAzureOpenAI, DefaultAsyncHttpxClient, DefaultHttpxClient, NotFoundError
 from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncLoadBalancer, LoadBalancer, Backend
 
