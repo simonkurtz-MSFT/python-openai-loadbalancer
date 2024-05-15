@@ -38,10 +38,6 @@ It's also good to have some knowledge of authentication and identities.
 
 Locally, you can log into Azure via the CLI and the steps below and use the `AzureDefaultCredential` (what I use in my example). When deploying this application in Azure, it's recommended to use a managed identity for authentication. It's best to avoid using the Azure OpenAI instances' keys as that could a) accidentally leave credentials in your source code, and b) the keys are different for each instance, which would probably require expanding upon the `Backends` class. Best to just avoid keys.
 
-## Single Requestor Model
-
-I started with a single-requestor model to experiment with the algorithm to select backends. This model is not typically used, as most workloads run multiple Python workers in parallel. Nevertheless, I left the files in the repo with the `single-requestor` suffix.
-
 ## Getting Started
 
 ### Cloning the repo & Preparing the python environment
