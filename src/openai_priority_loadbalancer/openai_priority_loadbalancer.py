@@ -41,6 +41,7 @@ class BaseLoadBalancer():
         selected_priority = float('inf')
         available_backends = []
 
+        # Evaluate all defined backends for availability and priority, leaving only the most-desirable available backends from which to select.
         for i in range(len(self.backends)):
             backend = self.backends[i]
 
@@ -63,7 +64,7 @@ class BaseLoadBalancer():
             # immediately inhibit the performance benefits of the load balancer. This is why this is more of a pseudo load-balancer. Therefore, we'll just randomize across the available backends.
             return random.choice(available_backends)
         else:
-            # If there are no available Backend, -1 will be returned to indicate that nothing is available (and that we should bail).
+            # If there are no available backends, -1 will be returned to indicate that nothing is available (and that we consequently need to bail by returning an HTTP 429).
             return -1
 
     def _get_remaining_backends(self):
