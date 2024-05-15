@@ -115,7 +115,7 @@ class BaseLoadBalancer():
         # Would likely be a 4xx error other than 429
         self._log.warning(f"Request sent to server: {request.url}, Status code: {response.status_code} - FAIL")
 
-    def modify_request(self, request, backend_index):
+    def _modify_request(self, request, backend_index):
         # Modify the request. Note that only the URL and Host header are being modified on the original request object. We make the smallest incision possible to avoid side effects.
         # Update URL and host header as both must match the backend server.
         request.url = request.url.copy_with(host = self.backends[backend_index].host)
@@ -147,7 +147,7 @@ class AsyncLoadBalancer(BaseLoadBalancer):
                 return self._return_429()
 
             # 2) Modify the intercepted request
-            self.modify_request(request, backend_index)
+            self._modify_request(request, backend_index)
 
             # 3) Send the request to the selected backend (via async)
             try:
@@ -192,7 +192,7 @@ class LoadBalancer(BaseLoadBalancer):
                 return self._return_429()
 
             # 2) Modify the intercepted request
-            self.modify_request(request, backend_index)
+            self._modify_request(request, backend_index)
 
             # 3) Send the request to the selected backend
             try:
