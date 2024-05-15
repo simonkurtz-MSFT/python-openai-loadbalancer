@@ -10,7 +10,7 @@ While the [OpenAI Python API library](https://github.com/openai/openai-python) r
 
 And while there are other Python OpenAI load balancers freely available, I have not seen one yet that addresses the aforementioned scenarios.
 
-Python OpenAI LoadBalancer is injected cleanly into the OpenAI Python API library. The changes between a conventional and a load-balanced Azure OpenAI implementation are few and almost entirely configuration of the backends to be used. You can see a side-by-side example in the [aoai.py](https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/blob/main/aoai.py) file in this repo.
+Python OpenAI Load Balancer is injected cleanly into the OpenAI Python API library. The changes between a conventional and a load-balanced Azure OpenAI implementation are few and almost entirely configuration of the backends to be used. You can see a side-by-side example in the [aoai.py](https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/blob/main/aoai.py) file in this repo.
 
 **Please refer to the GitHub repo for detailed test harnesses for the use cases described below.**
 
