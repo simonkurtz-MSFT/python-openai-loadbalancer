@@ -29,7 +29,7 @@ This project would not have been possible without the incredible work that [@and
 
 ## Prerequisites
 
-It helps to have some familiarity with how the [OpenAI Python API library](https://github.com/openai/openai-python) works. If you have used it before, then the code in `aoai.py` here will look very familiar to you.
+It helps to have some familiarity with how the [OpenAI Python API library](https://github.com/openai/openai-python) works. If you have used it before, then the code in the [aoai.py](https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/blob/main/aoai.py) test harness for this package will look very familiar to you.
 It's also good to have some knowledge of authentication and identities.
 
 ## Getting Started
