@@ -49,12 +49,16 @@ It's also good to have some knowledge of authentication and identities.
 Either import the synchronous load balancer:
 
 ```python
+from typing import List
+from openai import DefaultHttpxClient
 from openai_priority_loadbalancer import LoadBalancer, Backend
 ```
 
 Or import the asynchronous load balancer:
 
 ```python
+from typing import List
+from openai import DefaultAsyncHttpxClient
 from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
 ```
 

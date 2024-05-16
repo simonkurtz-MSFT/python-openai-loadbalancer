@@ -6,7 +6,7 @@ import traceback
 from typing import List
 from datetime import datetime, MAXYEAR, MINYEAR, timedelta, timezone
 from dateutil.tz import tzutc
-from httpx import AsyncClient, Client, Response
+import httpx    # import the entirety of the httpx module to avoid potential conflicts with AsyncClient in the openai package by using httpx. notation
 
 class Backend:
     """Class representing a backend object used with Azure OpenAI, etc."""
@@ -166,14 +166,14 @@ class BaseLoadBalancer():
         retry_after = str(self._get_soonest_retry_after())
         self._log.info("Returning HTTP 429 with Retry-After header value of %s %s.", retry_after, "second" if retry_after == "1" else "seconds")
 
-        return Response(429, content = '', headers={'Retry-After': retry_after})
+        return httpx.Response(429, content = '', headers={'Retry-After': retry_after})
 
 class AsyncLoadBalancer(BaseLoadBalancer):
     """Asynchronous Load Balancer class based on BaseLoadBalancer"""
 
     # Constructor
     def __init__(self, backends: List[Backend]):
-        super().__init__(AsyncClient(), backends)
+        super().__init__(httpx.AsyncClient(), backends)
 
     # Public Methods
     async def handle_async_request(self, request):
@@ -223,7 +223,7 @@ class LoadBalancer(BaseLoadBalancer):
 
     # Constructor
     def __init__(self, backends: List[Backend]):
-        super().__init__(Client(), backends)
+        super().__init__(httpx.Client(), backends)
 
     # Public Methods
     def handle_request(self, request):
