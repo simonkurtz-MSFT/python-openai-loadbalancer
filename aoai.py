@@ -25,7 +25,7 @@ class TestExecutions:
         self.stream_load_balanced       = True
         self.async_stream_load_balanced = True
 
-NUM_OF_REQUESTS                         = 5
+LOG_LEVEL                               = logging.INFO
 MODEL                                   = "<your-aoai-model>"  # the model, known as the Deployment in Azure OpenAI, is common across standard and load-balanced requests
 AZURE_ENDPOINT                          = "https://oai-eastus-xxxxxxxx.openai.azure.com"
 backends: List[Backend] = [
@@ -280,9 +280,9 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int):
 
 # Set up the logger: https://www.machinelearningplus.com/python/python-logging-guide/
 logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(module)-30s %(message)s',
-    level=logging.INFO,
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format = '%(asctime)s %(levelname)-8s %(module)-30s %(message)s',
+    level = LOG_LEVEL,
+    datefmt = '%Y-%m-%d %H:%M:%S'
 )
 
 # Ensure that variables are set.
