@@ -6,7 +6,7 @@ import time
 import traceback
 from typing import List
 from datetime import datetime
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import AzureOpenAI, AsyncAzureOpenAI, DefaultAsyncHttpxClient, DefaultHttpxClient, NotFoundError
 from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncLoadBalancer, LoadBalancer, Backend
 
@@ -37,12 +37,9 @@ backends: List[Backend] = [
 
 ##########################################################################################################################################################
 
-def token_provider():
-    """Function to provide the Azure AD token for the Azure OpenAI client."""
-
-    credential = DefaultAzureCredential()
-    token = credential.get_token('https://cognitiveservices.azure.com/.default')
-    return token.token
+# get_bearer_token_provider automatically caches and refreshes tokens.
+# https://github.com/openai/openai-python/blob/main/examples/azure_ad.py#L5
+token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")
 
 # Standard Azure OpenAI Implementation (One Backend)
 def send_request(num_of_requests, azure_endpoint: str):
