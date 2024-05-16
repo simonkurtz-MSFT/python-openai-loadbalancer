@@ -16,7 +16,7 @@ from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncL
 # >>> Only make changes to TEST_EXECUTIONS, NUM_OF_REQUESTS, MODEL, AZURE_ENDPOINT, and the backends list <<<
 
 class TestExecutions:
-    """Class representing the tests that can be performed"""
+    """Class representing the tests that can be performed."""
 
     def __init__(self):
         self.standard                   = True
@@ -26,7 +26,8 @@ class TestExecutions:
         self.async_stream_load_balanced = True
 
 LOG_LEVEL                               = logging.INFO
-MODEL                                   = "<your-aoai-model>"  # the model, known as the Deployment in Azure OpenAI, is common across standard and load-balanced requests
+NUM_OF_REQUESTS                         = 5
+MODEL                                   = "<your-aoai-model>"  # the model, also known as the Deployment in Azure OpenAI, is common across standard and load-balanced requests
 AZURE_ENDPOINT                          = "https://oai-eastus-xxxxxxxx.openai.azure.com"
 backends: List[Backend] = [
     Backend("oai-eastus-xxxxxxxx.openai.azure.com", 1),
