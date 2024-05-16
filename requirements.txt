@@ -1,5 +1,4 @@
 azure.identity
 httpx
-# DefaultHttpxClient and DefaultAsyncHttpxClient were introduced in 1.17.0: https://github.com/openai/openai-python/releases/tag/v1.17.0
-openai>=1.17.0
+openai
 python-dateutil

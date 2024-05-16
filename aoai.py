@@ -6,10 +6,13 @@ import time
 import traceback
 from typing import List
 from datetime import datetime
+# Using httpx.Client and httpx.AsyncClient avoids having to update openai to 1.17.1 or newer.
+# The openai properties for DefaultHttpxClient and DefaultAsyncHttpxClient are mere wrappers for httpx.Client and httpx.AsyncClient.
+# https://github.com/openai/openai-python/releases/tag/v1.17.0
+import httpx
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-from openai import AzureOpenAI, AsyncAzureOpenAI, DefaultAsyncHttpxClient, DefaultHttpxClient, NotFoundError
+from openai import AzureOpenAI, AsyncAzureOpenAI, NotFoundError
 from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncLoadBalancer, LoadBalancer, Backend
-
 
 ##########################################################################################################################################################
 
@@ -81,10 +84,10 @@ def send_loadbalancer_request(num_of_requests: int):
         lb = LoadBalancer(backends)
 
         client = AzureOpenAI(
-            azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"https://{backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
             api_version = "2024-04-01-preview",
-            http_client = DefaultHttpxClient(transport = lb)        # Inject the load balancer as the transport in a new default httpx client
+            http_client = httpx.Client(transport = lb)      # Inject the load balancer as the transport in a new default httpx client
         )
 
         for i in range(num_of_requests):
@@ -119,10 +122,10 @@ async def send_async_loadbalancer_request(num_of_requests: int):
         lb = AsyncLoadBalancer(backends)
 
         client = AsyncAzureOpenAI(
-            azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"https://{backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
             api_version = "2024-04-01-preview",
-            http_client = DefaultAsyncHttpxClient(transport = lb)   # Inject the load balancer as the transport in a new default httpx client
+            http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
         )
 
         for i in range(num_of_requests):
@@ -158,10 +161,10 @@ def send_stream_loadbalancer_request(num_of_requests: int):
         lb = LoadBalancer(backends)
 
         client = AzureOpenAI(
-            azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"https://{backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
             api_version = "2024-04-01-preview",
-            http_client = DefaultHttpxClient(transport = lb)        # Inject the load balancer as the transport in a new default httpx client
+            http_client = httpx.Client(transport = lb)      # Inject the load balancer as the transport in a new default httpx client
         )
 
         for i in range(num_of_requests):
@@ -219,10 +222,10 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int):
         lb = AsyncLoadBalancer(backends)
 
         client = AsyncAzureOpenAI(
-            azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"https://{backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
             api_version = "2024-04-01-preview",
-            http_client = DefaultAsyncHttpxClient(transport = lb)   # Inject the load balancer as the transport in a new default httpx client
+            http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
         )
 
         for i in range(num_of_requests):

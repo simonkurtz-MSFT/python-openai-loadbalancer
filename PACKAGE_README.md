@@ -50,7 +50,7 @@ Either import the **synchronous** load balancer:
 
 ```python
 from typing import List
-from openai import DefaultHttpxClient
+import httpx
 from openai_priority_loadbalancer import LoadBalancer, Backend
 ```
 
@@ -58,9 +58,12 @@ Or import the **asynchronous** load balancer:
 
 ```python
 from typing import List
-from openai import DefaultAsyncHttpxClient
+import httpx
 from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
 ```
+
+*Importing `httpx` lets us use `httpx.Client` and `httpx.AsyncClient`. This avoids having to update openai to at least
+[1.17.0](https://github.com/openai/openai-python/releases/tag/v1.17.0). The `openai` properties for `DefaultHttpxClient` and `DefaultAsyncHttpxClient` are mere wrappers for `httpx.Client` and `httpx.AsyncClient`.*
 
 ### Configuring the Backends and Load Balancer
 
@@ -84,7 +87,7 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
         azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
         azure_ad_token_provider = token_provider,               # Your authentication may vary. Please adjust accordingly.
         api_version = "2024-04-01-preview",
-        http_client = DefaultHttpxClient(transport = lb)        # Inject the synchronous load balancer as the transport in a new default httpx client.
+        http_client = httpx.Client(transport = lb)              # Inject the synchronous load balancer as the transport in a new default httpx client.
     )
     ```
 
@@ -97,7 +100,7 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
         azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
         azure_ad_token_provider = token_provider,               # Your authentication may vary. Please adjust accordingly.
         api_version = "2024-04-01-preview",
-        http_client = DefaultAsyncHttpxClient(transport = lb)   # Inject the asynchronous load balancer as the transport in a new default async httpx client.
+        http_client = httpx.AsyncClient(transport = lb)         # Inject the asynchronous load balancer as the transport in a new default async httpx client.
     )
     ```
 
