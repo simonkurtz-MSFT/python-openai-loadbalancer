@@ -46,7 +46,7 @@ It's also good to have some knowledge of authentication and identities.
 
 ### Importing Classes
 
-Either import the synchronous load balancer:
+Either import the **synchronous** load balancer:
 
 ```python
 from typing import List
@@ -54,7 +54,7 @@ from openai import DefaultHttpxClient
 from openai_priority_loadbalancer import LoadBalancer, Backend
 ```
 
-Or import the asynchronous load balancer:
+Or import the **asynchronous** load balancer:
 
 ```python
 from typing import List
@@ -75,6 +75,8 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
 
 1. Instantiate the load balancer and inject a new httpx client with the load balancer as the new transport.
 
+    **Synchronous**
+
     ```python
     lb = LoadBalancer(backends)
 
@@ -82,7 +84,20 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
         azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
         azure_ad_token_provider = token_provider,               # Your authentication may vary. Please adjust accordingly.
         api_version = "2024-04-01-preview",
-        http_client = DefaultHttpxClient(transport = lb)        # Inject the load balancer as the transport in a new default httpx client
+        http_client = DefaultHttpxClient(transport = lb)        # Inject the synchronous load balancer as the transport in a new default httpx client.
+    )
+    ```
+
+    **Asynchronous**
+
+    ```python
+    lb = AsyncLoadBalancer(backends)
+
+    client = AzureOpenAI(
+        azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+        azure_ad_token_provider = token_provider,               # Your authentication may vary. Please adjust accordingly.
+        api_version = "2024-04-01-preview",
+        http_client = DefaultAsyncHttpxClient(transport = lb)   # Inject the asynchronous load balancer as the transport in a new default async httpx client.
     )
     ```
 
