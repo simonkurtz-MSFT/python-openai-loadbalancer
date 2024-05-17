@@ -1,0 +1,7 @@
+[MESSAGES CONTROL]
+disable =
+    C0305,  # Trailing newlines
+    C0114,  # Missing module docstring
+    C0115,  # Missing class docstring
+    C0116,  # Missing function or method docstring
+    W0212,  # Access to a protected member _ of a client class
