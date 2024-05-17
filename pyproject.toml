@@ -13,7 +13,8 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "openai",
+    "httpx",
+    "python-dateutil"
 ]
 [project.urls]
 Homepage = "https://github.com/simonkurtz-MSFT/python-openai-loadbalancer"
