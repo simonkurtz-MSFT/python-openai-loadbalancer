@@ -54,7 +54,7 @@ For the load-balanced approach, please use the same model across all instances.
 1. Open [aoai.py](./aoai.py).
 1. Replace `<your-aoai-model>` with the name of your Azure OpenAI model.
 1. Replace `<your-aoai-instance>` with the primary/single Azure OpenAI instance.
-1. Replace `<your-aoai-instance-1>`, `<your-aoai-instance-2>`, `<your-aoai-instance-3>` with all the Azure OpenAI instances you want to load-balance across. Delete entries you don't need. See [Load Balancer Configuration](#load-balancer-configuration) for details.
+1. Replace `<your-aoai-instance-1>`, `<your-aoai-instance-2>`, `<your-aoai-instance-3>` with all the Azure OpenAI instances you want to load-balance across. Delete entries you don't need. See [Load Balancer Backend Configuration](#load-balancer-backend-configuration) for details.
 1. Replace the value for variable `num_of_requests` with the number of requests you wish to execute.
 
 ### Credentials
@@ -112,9 +112,9 @@ The wait periods are 44 seconds (westus), 4 seconds (eastus), and 7 seconds (sou
 2024-05-11 00:56:39.851076:   Request sent to server: https://oai-eastus-20240509.openai.azure.com/openai/deployments/gpt-35-turbo-sjk-001/chat/completions?api-version=2024-04-01-preview, Status code: 200
 ```
 
-## Load Balancer Configuration
+## Load Balancer Backend Configuration
 
-At its core, the Load Balancer configuration requires one or more backend hosts and a numeric priority starting at 1. Please take note that you define a host, not a URL.
+At its core, the Load Balancer Backend configuration requires one or more backend hosts and a numeric priority starting at 1. Please take note that you define a host, not a URL.
 
 I use a total of three Azure OpenAI instances in three regions. These instances are set up with intentionally small tokens-per-minute (tpm) to trigger HTTP 429s.
 The standard approach never changes and uses the same host (first in the backend list), which provides a stable comparison to the load-balanced approach.
