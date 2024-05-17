@@ -5,7 +5,6 @@ import random
 import traceback
 from typing import List
 from datetime import datetime, MAXYEAR, MINYEAR, timedelta, timezone
-from dateutil.tz import tzutc
 import httpx    # import the entirety of the httpx module to avoid potential conflicts with AsyncClient in the openai package by using httpx. notation
 
 class Backend:
@@ -40,10 +39,10 @@ class BaseLoadBalancer():
     def _check_throttling(self):
         """Check if any backend is throttling and reset if necessary."""
 
-        min_datetime = datetime(MINYEAR, 1, 1, tzinfo = tzutc())
+        min_datetime = datetime(MINYEAR, 1, 1, tzinfo = timezone.utc)
 
         for backend in self.backends:
-            if backend.is_throttling and datetime.now(tzutc()) >= backend.retry_after:
+            if backend.is_throttling and datetime.now(timezone.utc) >= backend.retry_after:
                 backend.is_throttling = False
                 backend.retry_after = min_datetime
                 self._log.info("Backend %s is no longer throttling.", backend.host)
@@ -98,7 +97,7 @@ class BaseLoadBalancer():
     def _get_soonest_retry_after(self):
         """Return the soonest retry-after time in seconds among all throttling backends. This provides for the quickest retry time to be returned with the HTTP 429."""
 
-        soonest_retry_after = datetime(MAXYEAR, 1, 1, tzinfo = tzutc())
+        soonest_retry_after = datetime(MAXYEAR, 1, 1, tzinfo = timezone.utc)
 
         for backend in self.backends:
             if backend.is_throttling and backend.retry_after < soonest_retry_after:
@@ -138,7 +137,7 @@ class BaseLoadBalancer():
         # 2) Regardless of whether the response indicates a 429 or 5xx error, we mark the backend as throttling to temporarily take it out of the available backend pool.
         backend = self.backends[backend_index]
         backend.is_throttling = True
-        backend.retry_after = datetime.now(tzutc()) + timedelta(seconds = retry_after)
+        backend.retry_after = datetime.now(timezone.utc) + timedelta(seconds = retry_after)
 
         # 3) Update the available backends.
         self._get_available_backends()
