@@ -1,6 +1,6 @@
 [project]
 name = "openai_priority_loadbalancer"
-version = "1.0.5"
+version = "1.0.6"
 authors = [
   { name="Simon Kurtz", email="simonkurtz@gmail.com" },
 ]
