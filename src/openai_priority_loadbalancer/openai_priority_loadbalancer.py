@@ -82,7 +82,7 @@ class BaseLoadBalancer():
         return -1
 
     def _get_available_backends(self):
-        """Return the backends that are not actively throttled. This subset is the set of available backends."""
+        """Return the count of backends that are not actively throttled."""
 
         self._available_backends = 0
 
