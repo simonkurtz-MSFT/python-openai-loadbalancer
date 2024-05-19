@@ -2,4 +2,3 @@ azure.identity
 httpx
 openai
 pytest
-python-dateutil

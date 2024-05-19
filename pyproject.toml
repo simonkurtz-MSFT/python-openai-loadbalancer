@@ -1,6 +1,6 @@
 [project]
 name = "openai_priority_loadbalancer"
-version = "1.0.6"
+version = "1.0.7"
 authors = [
   { name="Simon Kurtz", email="simonkurtz@gmail.com" },
 ]
@@ -13,8 +13,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "httpx",
-    "python-dateutil"
+    "httpx"
 ]
 [project.urls]
 Homepage = "https://github.com/simonkurtz-MSFT/python-openai-loadbalancer"
