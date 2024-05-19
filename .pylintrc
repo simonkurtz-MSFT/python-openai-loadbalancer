@@ -1,9 +1,5 @@
 [MESSAGES CONTROL]
 disable =
-    ; C0114,  # Missing module docstring
-    ; C0115,  # Missing class docstring
-    ; C0116,  # Missing function or method docstring
     C0301,  # Line too long
     R0903,  # Too few public methods
-    ; W0212,  # Access to a protected member _ of a client class
     W0718,  # Unused variable
