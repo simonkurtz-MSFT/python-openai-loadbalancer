@@ -73,6 +73,10 @@ When running in Azure, it's advised to use managed identities.
 1. Initially, [python-aoai.ps1](./python-aoai.ps1) once to ensure it executes correctly.
 1. Run [python-aoai.ps1](./python-aoai.ps1) concurrently in multiple terminals to simulate parallel requests from multiple python workers.
 
+## Testing
+
+OpenAI Priority Load Balancer uses `pytest`. The test files can be found in the `tests\lib` directory. Executing `pytest -v` from the root will show test results. Note that these are rudimentary tests still and in the process of being built out further. Pull requests for imrprovements are very much appreciated!
+
 ## Distribution of Requests
 
 ### Across Different Priorities

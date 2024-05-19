@@ -1,3 +1,4 @@
 azure.identity
 httpx
 openai
+pytest
