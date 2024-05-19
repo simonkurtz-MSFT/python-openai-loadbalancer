@@ -1,4 +1,12 @@
-azure.identity
+# Requirements for ...
+
+# openai-priority-loadbalancer
 httpx
+
+# Test harness
+azure.identity
 openai
+
+# Testing
+coverage
 pytest

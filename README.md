@@ -75,7 +75,13 @@ When running in Azure, it's advised to use managed identities.
 
 ## Testing
 
-OpenAI Priority Load Balancer uses `pytest`. The test files can be found in the `tests\lib` directory. Executing `pytest -v` from the root will show test results. Note that these are rudimentary tests still and in the process of being built out further. Pull requests for imrprovements are very much appreciated!
+OpenAI Priority Load Balancer uses `pytest` and `coverage`. The test files can be found in the `tests\lib` directory. Executing `pytest -v` from the root will show test results. Note that these are rudimentary tests still and in the process of being built out further.
+
+To obtain coverage, execute `coverage run -m pytest -v` from the root. This generates a *.coverage* file. Then run `coverage report -m` or, for a nicer presentation, `coverage html`.
+
+Details on `coverage` can be found [here](https://coverage.readthedocs.io/).
+
+Pull requests for improvements are very much appreciated!
 
 ## Distribution of Requests
 

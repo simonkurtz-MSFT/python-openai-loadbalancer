@@ -3,3 +3,4 @@ python_env
 dist
 build
 *.egg-info
+.coverage
