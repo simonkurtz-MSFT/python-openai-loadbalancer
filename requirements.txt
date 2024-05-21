@@ -9,6 +9,7 @@ openai
 
 # Building
 build
+twine
 
 # Testing
 coverage
