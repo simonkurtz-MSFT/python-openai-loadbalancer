@@ -103,7 +103,11 @@ def success_backends(request):
 def failure_backends(request):
     return request.getfixturevalue(request.param.__name__)
 
-# Client Fixtures
+# Synchronous Client Fixtures
+
+@pytest.fixture
+def client_same_priority(backends_same_priority) -> AzureOpenAI:
+    return create_client(backends_same_priority)
 
 @pytest.fixture
 def client_successful_backends(success_backends) -> AzureOpenAI:
@@ -112,6 +116,12 @@ def client_successful_backends(success_backends) -> AzureOpenAI:
 @pytest.fixture
 def client_failure_backends(failure_backends) -> AzureOpenAI:
     return create_client(failure_backends)
+
+# Asynchronous Client Fixtures
+
+@pytest.fixture
+def async_client_same_priority(backends_same_priority) -> AzureOpenAI:
+    return create_async_client(backends_same_priority)
 
 @pytest.fixture
 def async_client_successful_backends(success_backends) -> AsyncAzureOpenAI:
@@ -192,7 +202,7 @@ class TestSynchronous:
         assert response.status_code == 429
         assert response.headers["Retry-After"] == "1"
 
-    #@pytest.mark.skip(reason="This test is sleeping too long to always execute.")
+    # @pytest.mark.skip(reason="This test is sleeping too long to always execute.")
     @pytest.mark.loadbalancer
     def test_loadbalancer_instantiation_with_all_throttling_then_resetting(self, all_backends_throttling: List[Backend]) -> None:
         _lb = LoadBalancer(all_backends_throttling)
@@ -247,6 +257,41 @@ class TestSynchronous:
             response = client._client._transport.handle_request(req)
 
             assert response.status_code == 429
+
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_handle_429_failure(self, client_same_priority):
+        client = client_same_priority
+
+        # Create a sequence of mock responses for the transport
+        mock_responses = [httpx.Response(429), httpx.Response(200)]
+
+        #with patch('httpx.Client.send', return_value = mock_response):
+        with patch('httpx.Client.send', side_effect = mock_responses) as mock_send:
+            req = client._build_request(create_final_request_options())
+            response = client._client._transport.handle_request(req)
+
+            # Assert that send was called twice: once for the initial request and once for the retry
+            assert mock_send.call_count == 2
+
+            # Assert that the final response status code was 200
+            assert response.status_code == 200
+
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_handle_4xx_failure(self, client_same_priority):
+        client = client_same_priority
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(400)
+
+        with patch('httpx.Client.send', return_value = mock_response) as mock_send:
+            req = client._build_request(create_final_request_options())
+            response = client._client._transport.handle_request(req)
+
+            # Assert that send was called twice: once for the initial request and once for the retry
+            assert mock_send.call_count == 1
+
+            # Assert that the final response status code was 200
+            assert response.status_code == 400
 
 # Asynchronous Tests
 
@@ -303,7 +348,7 @@ class TestAsynchronous:
         assert response.status_code == 429
         assert response.headers["Retry-After"] == "1"
 
-    #@pytest.mark.skip(reason="This test is sleeping too long to always execute.")
+    # @pytest.mark.skip(reason="This test is sleeping too long to always execute.")
     @pytest.mark.loadbalancer
     def test_async_loadbalancer_instantiation_with_all_throttling_then_resetting(self, all_backends_throttling: List[Backend]) -> None:
         _lb = AsyncLoadBalancer(all_backends_throttling)
@@ -361,3 +406,39 @@ class TestAsynchronous:
             response = await client._client._transport.handle_async_request(req)
 
             assert response.status_code == 429
+
+    @pytest.mark.asyncio
+    @pytest.mark.loadbalancer
+    async def test_loadbalancer_handle_429_failure(self, async_client_same_priority):
+        client = async_client_same_priority
+
+        # Create a sequence of mock responses for the transport
+        mock_responses = [httpx.Response(429), httpx.Response(200)]
+
+        with patch('httpx.AsyncClient.send', side_effect = mock_responses) as mock_send:
+            req = client._build_request(create_final_request_options())
+            response = await client._client._transport.handle_async_request(req)
+
+            # Assert that send was called twice: once for the initial request and once for the retry
+            assert mock_send.call_count == 2
+
+            # Assert that the final response status code was 200
+            assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    @pytest.mark.loadbalancer
+    async def test_loadbalancer_handle_4xx_failure(self, async_client_same_priority):
+        client = async_client_same_priority
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(400)
+
+        with patch('httpx.AsyncClient.send', return_value = mock_response) as mock_send:
+            req = client._build_request(create_final_request_options())
+            response = await client._client._transport.handle_async_request(req)
+
+            # Assert that send was called twice: once for the initial request and once for the retry
+            assert mock_send.call_count == 1
+
+            # Assert that the final response status code was 200
+            assert response.status_code == 400
