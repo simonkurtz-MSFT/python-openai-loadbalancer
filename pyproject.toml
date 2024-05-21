@@ -8,13 +8,14 @@ description = "A multi-backend, prioritization load balancer for OpenAI"
 readme = "PACKAGE_README.md"
 requires-python = ">=3.8"
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
 ]
 dependencies = [
     "httpx"
@@ -22,6 +23,7 @@ dependencies = [
 [project.urls]
 Changelog = "https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/releases"
 Documentation = "https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/blob/main/README.md"
+GitHub-Statistics = "https://shields.io/github/stars/simonkurtz-MSFT/python-openai-loadbalancer?style=social"
 Homepage = "https://github.com/simonkurtz-MSFT/python-openai-loadbalancer"
 Issues = "https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/issues"
 Repository = "https://github.com/simonkurtz-MSFT/python-openai-loadbalancer"
