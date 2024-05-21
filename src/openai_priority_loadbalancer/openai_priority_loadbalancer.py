@@ -3,7 +3,6 @@
 # Python Standard Library
 import logging
 import random
-import traceback
 from typing import List
 from datetime import datetime, MAXYEAR, MINYEAR, timedelta, timezone
 
