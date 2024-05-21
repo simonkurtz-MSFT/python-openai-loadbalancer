@@ -178,7 +178,7 @@ class AsyncLoadBalancer(BaseLoadBalancer):
         super().__init__(httpx.AsyncClient(), backends)
 
     # Public Methods
-    async def handle_async_request(self, request):
+    async def handle_async_request(self, request) -> httpx.Response:
         """Handles an asynchronous request by issuing an asynchronous request to an available backed."""
 
         self._log.info("Intercepted and now handling an asynchronous request.")
@@ -228,7 +228,7 @@ class LoadBalancer(BaseLoadBalancer):
         super().__init__(httpx.Client(), backends)
 
     # Public Methods
-    def handle_request(self, request):
+    def handle_request(self, request) -> httpx.Response:
         """Handles a synchronous request by issuing a request to an available backed."""
 
         self._log.info("Intercepted and now handling a synchronous request.")

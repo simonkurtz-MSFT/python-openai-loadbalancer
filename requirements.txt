@@ -10,3 +10,4 @@ openai
 # Testing
 coverage
 pytest
+pytest-asyncio
