@@ -35,3 +35,8 @@ jobs:
     - name: Test with pytest
       run: |
         coverage run -m pytest -v && coverage html
+    - name: Upload code coverage to GitHub Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: coverage-report
+        path: htmlcov/
