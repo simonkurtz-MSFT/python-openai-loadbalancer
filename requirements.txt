@@ -13,5 +13,6 @@ twine
 
 # Testing
 coverage
+pylint
 pytest
 pytest-asyncio
