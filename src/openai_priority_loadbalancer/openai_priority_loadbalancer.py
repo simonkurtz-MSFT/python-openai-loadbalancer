@@ -97,6 +97,8 @@ class BaseLoadBalancer():
     def _get_soonest_retry_after(self) -> int:
         """Return the soonest retry-after time in seconds among all throttling backends. This provides for the quickest retry time to be returned with the HTTP 429."""
 
+        delay = 0
+        soonest_backend = ""
         soonest_retry_after = datetime(MAXYEAR, 1, 1, tzinfo = timezone.utc)
 
         for backend in self.backends:
@@ -104,9 +106,10 @@ class BaseLoadBalancer():
                 soonest_retry_after = backend.retry_after
                 soonest_backend = backend.host
 
-        # As the `int` cast truncates the decimal, we need to add 1 to the result to ensure that the delay is at least the number of seconds needed.
-        delay = int((soonest_retry_after - datetime.now(timezone.utc)).total_seconds()) + 1
-        self._log.info("The soonest retry to an available backend would be to %s after %s %s.", soonest_backend, delay, "second" if delay == 1 else "seconds")
+        if soonest_backend != "":
+            # As the `int` cast truncates the decimal, we need to add 1 to the result to ensure that the delay is at least the number of seconds needed.
+            delay = int((soonest_retry_after - datetime.now(timezone.utc)).total_seconds()) + 1
+            self._log.info("The soonest retry to an available backend would be to %s after %s %s.", soonest_backend, delay, "second" if delay == 1 else "seconds")
 
         return delay
 
