@@ -1,3 +1,5 @@
+[![Python application](https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/actions/workflows/python-app.yml)
+
 # Python OpenAI Load Balancer
 
 TL;DR! How do I [start](#getting-started)?
