@@ -1,6 +1,6 @@
-[![Python application](https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/actions/workflows/python-app.yml)
-
 # Python OpenAI Load Balancer
+
+[![Python application](https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/simonkurtz-MSFT/python-openai-loadbalancer/actions/workflows/python-app.yml) [![Python](https://img.shields.io/pypi/pyversions/azure-core.svg?maxAge=2592000)](https://pypi.org/project/openai-priority-loadbalancer/)
 
 TL;DR! How do I [start](#getting-started)?
 
