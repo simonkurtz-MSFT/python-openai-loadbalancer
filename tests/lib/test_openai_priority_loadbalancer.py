@@ -21,6 +21,8 @@ from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncL
 
 ##########################################################################################################################################################
 
+SKIP_LONG_RUNNING_TESTS = False
+
 # Utility Functions
 
 def create_async_client(backends: List[Backend]) -> AsyncAzureOpenAI:
@@ -202,6 +204,7 @@ class TestSynchronous:
         assert response.status_code == 429
         assert response.headers["Retry-After"] == "1"
 
+    @pytest.mark.skipif(SKIP_LONG_RUNNING_TESTS is True, reason = "Flag is set to skip long tests.")
     @pytest.mark.loadbalancer
     def test_loadbalancer_instantiation_with_all_throttling_then_resetting(self, all_backends_throttling: List[Backend]) -> None:
         _lb = LoadBalancer(all_backends_throttling)
@@ -275,6 +278,23 @@ class TestSynchronous:
             assert response.status_code == 200
 
     @pytest.mark.loadbalancer
+    def test_loadbalancer_handle_all_backend_429_failure(self, client_same_priority):
+        client = client_same_priority
+
+        # Create a sequence of mock responses for the transport
+        mock_responses = [httpx.Response(429), httpx.Response(429), httpx.Response(429)]
+
+        with patch('httpx.Client.send', side_effect = mock_responses) as mock_send:
+            req = client._build_request(create_final_request_options())
+            response = client._client._transport.handle_request(req)
+
+            # Assert that send was called twice: once for the initial request and once for the retry
+            assert mock_send.call_count == 3
+
+            # Assert that the final response status code was 200
+            assert response.status_code == 429
+
+    @pytest.mark.loadbalancer
     def test_loadbalancer_handle_4xx_failure(self, client_same_priority):
         client = client_same_priority
 
@@ -295,7 +315,7 @@ class TestSynchronous:
 
 class TestAsynchronous:
 
-    @pytest.mark.loadbalancer
+    @pytest.mark.async_loadbalancer
     def test_async_loadbalancer_instantiation(self, backends_same_priority: List[Backend]) -> None:
         _lb = AsyncLoadBalancer(backends_same_priority)
 
@@ -312,7 +332,7 @@ class TestAsynchronous:
         assert _lb._available_backends == 1
         assert isinstance(_lb._transport, httpx.AsyncClient)
 
-    @pytest.mark.loadbalancer
+    @pytest.mark.async_loadbalancer
     def test_async_loadbalancer_instantiation_with_backends_0_and_1_throttling(self, backends_0_and_1_throttling: List[Backend]) -> None:
         _lb = AsyncLoadBalancer(backends_0_and_1_throttling)
 
@@ -328,7 +348,7 @@ class TestAsynchronous:
         assert available_backends == 1
 
 
-    @pytest.mark.loadbalancer
+    @pytest.mark.async_loadbalancer
     def test_async_loadbalancer_instantiation_with_all_throttling(self, all_backends_throttling: List[Backend]) -> None:
         _lb = AsyncLoadBalancer(all_backends_throttling)
 
@@ -346,7 +366,8 @@ class TestAsynchronous:
         assert response.status_code == 429
         assert response.headers["Retry-After"] == "1"
 
-    @pytest.mark.loadbalancer
+    @pytest.mark.skipif(SKIP_LONG_RUNNING_TESTS is True, reason = "Flag is set to skip long tests.")
+    @pytest.mark.async_loadbalancer
     def test_async_loadbalancer_instantiation_with_all_throttling_then_resetting(self, all_backends_throttling: List[Backend]) -> None:
         _lb = AsyncLoadBalancer(all_backends_throttling)
 
@@ -367,7 +388,7 @@ class TestAsynchronous:
         available_backends = _lb._get_available_backends()
         assert available_backends == 3
 
-    @pytest.mark.loadbalancer
+    @pytest.mark.async_loadbalancer
     def test_async_loadbalancer_different_priority(self, priority_backend_0_throttling: List[Backend]) -> None:
         _lb = AsyncLoadBalancer(priority_backend_0_throttling)
         selected_index = _lb._get_backend_index()
@@ -376,7 +397,7 @@ class TestAsynchronous:
         assert selected_index in (1, 2)
 
     @pytest.mark.asyncio
-    @pytest.mark.loadbalancer
+    @pytest.mark.async_loadbalancer
     async def test_async_loadbalancer_handle_successful_requests(self, async_client_successful_backends):
         client = async_client_successful_backends
 
@@ -390,7 +411,7 @@ class TestAsynchronous:
             assert response.status_code == 200
 
     @pytest.mark.asyncio
-    @pytest.mark.loadbalancer
+    @pytest.mark.async_loadbalancer
     async def test_async_loadbalancer_handle_failure_requests(self, async_client_failure_backends):
         client = async_client_failure_backends
 
@@ -405,8 +426,8 @@ class TestAsynchronous:
             assert response.status_code == 429
 
     @pytest.mark.asyncio
-    @pytest.mark.loadbalancer
-    async def test_loadbalancer_handle_429_failure(self, async_client_same_priority):
+    @pytest.mark.async_loadbalancer
+    async def test_async_loadbalancer_handle_429_failure(self, async_client_same_priority):
         client = async_client_same_priority
 
         # Create a sequence of mock responses for the transport
@@ -423,8 +444,26 @@ class TestAsynchronous:
             assert response.status_code == 200
 
     @pytest.mark.asyncio
-    @pytest.mark.loadbalancer
-    async def test_loadbalancer_handle_4xx_failure(self, async_client_same_priority):
+    @pytest.mark.async_loadbalancer
+    async def test_async_loadbalancer_handle_all_backend_429_failure(self, async_client_same_priority):
+        client = async_client_same_priority
+
+        # Create a sequence of mock responses for the transport
+        mock_responses = [httpx.Response(429), httpx.Response(429), httpx.Response(429)]
+
+        with patch('httpx.AsyncClient.send', side_effect = mock_responses) as mock_send:
+            req = client._build_request(create_final_request_options())
+            response = await client._client._transport.handle_async_request(req)
+
+            # Assert that send was called twice: once for the initial request and once for the retry
+            assert mock_send.call_count == 3
+
+            # Assert that the final response status code was 200
+            assert response.status_code == 429
+
+    @pytest.mark.asyncio
+    @pytest.mark.async_loadbalancer
+    async def test_async_loadbalancer_handle_4xx_failure(self, async_client_same_priority):
         client = async_client_same_priority
 
         # Create a mock response for the transport
