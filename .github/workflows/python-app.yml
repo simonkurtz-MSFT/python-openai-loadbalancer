@@ -41,5 +41,5 @@ jobs:
     - name: Upload code coverage to GitHub Artifacts
       uses: actions/upload-artifact@v4.3.3
       with:
-        name: coverage-report
+        name: coverage-report-${{ matrix.python-version}}
         path: htmlcov/
