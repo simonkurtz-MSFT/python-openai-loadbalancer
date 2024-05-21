@@ -189,20 +189,14 @@ class AsyncLoadBalancer(BaseLoadBalancer):
         response = None
 
         while self._available_backends > 0:
-            # 1) Determine the appropriate backend to use
+            # 1) Since we have available backends determine the appropriate backend to use.
             backend_index = self._get_backend_index()
 
-            if backend_index == -1:
-                return self._return_429()
-
-            # 2) Modify the intercepted request
+            # 2) Modify the intercepted request.
             self._modify_request(request, backend_index)
 
-            # 3) Send the request to the selected backend (via async)
-            try:
-                response = await self._transport.send(request)
-            except Exception:
-                self._log.error(traceback.print_exc())
+            # 3) Send the request to the selected backend (via async). If an error occurs, it will just bubble up, which is fine.
+            response = await self._transport.send(request)
 
             # 4) Evaluate the response from the backend:
             #    If 429 or a 5xx error, we continue the loop and retry with another backend, if available.
@@ -239,20 +233,14 @@ class LoadBalancer(BaseLoadBalancer):
         response = None
 
         while self._available_backends > 0:
-            # 1) Determine the appropriate backend to use
+            # 1) Since we have available backends determine the appropriate backend to use.
             backend_index = self._get_backend_index()
 
-            if backend_index == -1:
-                return self._return_429()
-
-            # 2) Modify the intercepted request
+            # 2) Modify the intercepted request.
             self._modify_request(request, backend_index)
 
-            # 3) Send the request to the selected backend
-            try:
-                response = self._transport.send(request)
-            except Exception:
-                self._log.error(traceback.print_exc())
+            # 3) Send the request to the selected backend. If an error occurs, it will just bubble up, which is fine.
+            response = self._transport.send(request)
 
             # 4) Evaluate the response from the backend:
             #    If 429 or a 5xx error, we continue the loop and retry with another backend, if available.
