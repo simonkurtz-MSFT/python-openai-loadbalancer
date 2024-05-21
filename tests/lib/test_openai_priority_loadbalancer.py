@@ -7,8 +7,8 @@
 
 import os
 import sys
-from datetime import datetime, timedelta, timezone
 import time
+from datetime import datetime, timedelta, timezone
 from typing import List
 from unittest.mock import patch
 from openai._models import FinalRequestOptions
@@ -50,60 +50,50 @@ def create_final_request_options() -> FinalRequestOptions:
         json_data={"model": "my-deployment-model"},
     )
 
-def in_seconds(secs: int) -> int:
-    return datetime.now(timezone.utc) + timedelta(seconds = secs)
-
 # Test Fixtures
 
+# Backend Fixtures
+
+# Factory fixture for backends
 @pytest.fixture
-def backends_same_priority() -> List[Backend]:
-    backends: List[Backend] = [
-        Backend("oai-eastus.openai.azure.com", 1),
-        Backend("oai-southcentralus.openai.azure.com", 1),
-        Backend("oai-west.openai.azure.com", 1),
-    ]
+def backends_factory():
+    def _backends_factory(priority, is_throttling, retry_after):
+        # Start with a basic list of backends that will be modified depending on the passed arguments.
+        backends: List[Backend] = [
+            Backend("oai-eastus.openai.azure.com", 1),
+            Backend("oai-southcentralus.openai.azure.com", 1),
+            Backend("oai-west.openai.azure.com", 1),
+        ]
 
-    return backends
+        for backend, _priority, throttling, secs in zip(backends, priority, is_throttling, retry_after):
+            backend.priority = _priority
+            backend.is_throttling = throttling
+            if secs is not None:
+                backend.retry_after = datetime.now(timezone.utc) + timedelta(seconds = secs)
 
-@pytest.fixture
-def backends_tiered_priority() -> List[Backend]:
-    backends: List[Backend] = [
-        Backend("oai-eastus.openai.azure.com", 1),
-        Backend("oai-southcentralus.openai.azure.com", 2),
-        Backend("oai-west.openai.azure.com", 2),
-    ]
+        return backends
 
-    return backends
-
-@pytest.fixture
-def backends_0_and_1_throttling(backends_same_priority: List[Backend]) -> List[Backend]:
-    backends = backends_same_priority
-
-    backends[0].is_throttling = True
-    backends[0].retry_after = in_seconds(3)
-
-    backends[1].is_throttling = True
-    backends[1].retry_after = in_seconds(1)
-
-    return backends
+    return _backends_factory
 
 @pytest.fixture
-def all_backends_throttling(backends_0_and_1_throttling: List[Backend]) -> List[Backend]:
-    backends = backends_0_and_1_throttling
-
-    backends[2].is_throttling = True
-    backends[2].retry_after = in_seconds(5)
-
-    return backends
+def backends_same_priority(backends_factory) -> List[Backend]:
+    return backends_factory([1, 1, 1], [False, False, False], [None, None, None])
 
 @pytest.fixture
-def priority_backend_0_throttling(backends_tiered_priority: List[Backend]) -> List[Backend]:
-    backends = backends_tiered_priority
+def backends_tiered_priority(backends_factory) -> List[Backend]:
+    return backends_factory([1, 2, 2], [False, False, False], [None, None, None])
 
-    backends[0].is_throttling = True
-    backends[0].retry_after = in_seconds(3)
+@pytest.fixture
+def backends_0_and_1_throttling(backends_factory) -> List[Backend]:
+    return backends_factory([1, 1, 1], [True, True, False], [3, 1, None])
 
-    return backends
+@pytest.fixture
+def all_backends_throttling(backends_factory) -> List[Backend]:
+    return backends_factory([1, 1, 1], [True, True, True], [3, 1, 5])
+
+@pytest.fixture
+def priority_backend_0_throttling(backends_factory) -> List[Backend]:
+    return backends_factory([1, 2, 2], [True, False, False], [3, None, None])
 
 @pytest.fixture(params=[backends_same_priority, backends_tiered_priority, backends_0_and_1_throttling, priority_backend_0_throttling])
 def success_backends(request):
@@ -112,6 +102,8 @@ def success_backends(request):
 @pytest.fixture(params=[all_backends_throttling])
 def failure_backends(request):
     return request.getfixturevalue(request.param.__name__)
+
+# Client Fixtures
 
 @pytest.fixture
 def client_successful_backends(success_backends) -> AzureOpenAI:
@@ -133,169 +125,239 @@ def async_client_failure_backends(failure_backends) -> AsyncAzureOpenAI:
 
 # Tests
 
-@pytest.mark.loadbalancer
-def test_handle_successful_requests(client_successful_backends):
-    client = client_successful_backends
+# Backend Tests
 
-    # Create a mock response for the transport
-    mock_response = httpx.Response(200, json={"id": "9ed7dasdasd-08ff-4ae1-8952-37e3a323eb08"})
+class TestBackend:
+    @pytest.mark.backend
+    def test_backend_instantiation(self) -> None:
+        backend = Backend("oai-eastus.openai.azure.com", 1)
 
-    with patch('httpx.Client.send', return_value = mock_response):
-        req = client._build_request(
-            FinalRequestOptions.construct(
-                method="post",
-                url="/chat/completions",
-                json_data={"model": "my-deployment-model"},
-            )
-        )
+        assert backend.host == "oai-eastus.openai.azure.com"
+        assert not backend.is_throttling
+        assert backend.priority == 1
+        assert backend.retry_after == datetime.min
+        assert backend.successful_call_count == 0
 
-        response = client._client._transport.handle_request(req)
+# Synchronous Tests
 
-        assert response.status_code == 200
+class TestSynchronous:
 
-@pytest.mark.asyncio
-@pytest.mark.loadbalancer
-async def test_async_handle_successful_requests(async_client_successful_backends):
-    client = async_client_successful_backends
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_instantiation(self, backends_same_priority: List[Backend]) -> None:
+        _lb = LoadBalancer(backends_same_priority)
 
-    # Create a mock response for the transport
-    mock_response = httpx.Response(200, json={"id": "9ed7dasdasd-08ff-4ae1-8952-37e3a323eb08"})
+        assert _lb.backends == backends_same_priority
+        assert len(_lb.backends) == 3
 
-    with patch('httpx.AsyncClient.send', return_value = mock_response):
-        req = client._build_request(create_final_request_options())
+        assert _lb.backends[0].host == "oai-eastus.openai.azure.com"
+        assert not _lb.backends[0].is_throttling
+        assert _lb.backends[0].priority == 1
+        assert _lb.backends[0].retry_after == datetime.min
+        assert _lb.backends[0].successful_call_count == 0
 
-        response = await client._client._transport.handle_async_request(req)
+        assert _lb._backend_index == -1
+        assert _lb._available_backends == 1
+        assert isinstance(_lb._transport, httpx.Client)
 
-        assert response.status_code == 200
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_instantiation_with_backends_0_and_1_throttling(self, backends_0_and_1_throttling: List[Backend]) -> None:
+        _lb = LoadBalancer(backends_0_and_1_throttling)
 
-@pytest.mark.loadbalancer
-def test_handle_failure_requests(client_failure_backends):
-    client = client_failure_backends
+        assert _lb.backends == backends_0_and_1_throttling
+        assert len(_lb.backends) == 3
 
-    # Create a mock response for the transport
-    mock_response = httpx.Response(200, json={"id": "9ed7dasdasd-08ff-4ae1-8952-37e3a323eb08"})
+        _lb._check_throttling()
 
-    with patch('httpx.Client.send', return_value = mock_response):
-        req = client._build_request(create_final_request_options())
+        selected_index = _lb._get_backend_index()
+        assert selected_index == 2
 
-        response = client._client._transport.handle_request(req)
+        available_backends = _lb._get_available_backends()
+        assert available_backends == 1
 
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_instantiation_with_all_throttling(self, all_backends_throttling: List[Backend]) -> None:
+        _lb = LoadBalancer(all_backends_throttling)
+
+        assert _lb.backends == all_backends_throttling
+        assert len(_lb.backends) == 3
+
+        _lb._check_throttling()
+        available_backends = _lb._get_available_backends()
+        assert available_backends == 0
+
+        delay = _lb._get_soonest_retry_after()
+        assert delay == 1
+
+        response: httpx.Response = _lb._return_429()
         assert response.status_code == 429
+        assert response.headers["Retry-After"] == "1"
 
-@pytest.mark.asyncio
-@pytest.mark.loadbalancer
-async def test_async_handle_failure_requests(async_client_failure_backends):
-    client = async_client_failure_backends
+    #@pytest.mark.skip(reason="This test is sleeping too long to always execute.")
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_instantiation_with_all_throttling_then_resetting(self, all_backends_throttling: List[Backend]) -> None:
+        _lb = LoadBalancer(all_backends_throttling)
 
-    # Create a mock response for the transport
-    mock_response = httpx.Response(200, json={"id": "9ed7dasdasd-08ff-4ae1-8952-37e3a323eb08"})
+        assert _lb.backends == all_backends_throttling
+        assert len(_lb.backends) == 3
 
-    with patch('httpx.AsyncClient.send', return_value = mock_response):
-        req = client._build_request(create_final_request_options())
+        _lb._check_throttling()
+        available_backends = _lb._get_available_backends()
+        assert available_backends == 0
+        selected_index = _lb._get_backend_index()
+        assert selected_index == -1
+        delay = _lb._get_soonest_retry_after()
+        assert delay == 1
 
-        response = await client._client._transport.handle_async_request(req)
+        time.sleep(6)
 
+        _lb._check_throttling()
+        available_backends = _lb._get_available_backends()
+        assert available_backends == 3
+
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_different_priority(self, priority_backend_0_throttling: List[Backend]) -> None:
+        _lb = LoadBalancer(priority_backend_0_throttling)
+        selected_index = _lb._get_backend_index()
+
+        assert selected_index != 0
+        assert selected_index in (1, 2)
+
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_handle_successful_requests(self, client_successful_backends):
+        client = client_successful_backends
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
+
+        with patch('httpx.Client.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
+            response = client._client._transport.handle_request(req)
+
+            assert response.status_code == 200
+
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_handle_failure_requests(self, client_failure_backends):
+        client = client_failure_backends
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
+
+        with patch('httpx.Client.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
+            response = client._client._transport.handle_request(req)
+
+            assert response.status_code == 429
+
+# Asynchronous Tests
+
+class TestAsynchronous:
+
+    @pytest.mark.loadbalancer
+    def test_async_loadbalancer_instantiation(self, backends_same_priority: List[Backend]) -> None:
+        _lb = AsyncLoadBalancer(backends_same_priority)
+
+        assert _lb.backends == backends_same_priority
+        assert len(_lb.backends) == 3
+
+        assert _lb.backends[0].host == "oai-eastus.openai.azure.com"
+        assert not _lb.backends[0].is_throttling
+        assert _lb.backends[0].priority == 1
+        assert _lb.backends[0].retry_after == datetime.min
+        assert _lb.backends[0].successful_call_count == 0
+
+        assert _lb._backend_index == -1
+        assert _lb._available_backends == 1
+        assert isinstance(_lb._transport, httpx.AsyncClient)
+
+    @pytest.mark.loadbalancer
+    def test_async_loadbalancer_instantiation_with_backends_0_and_1_throttling(self, backends_0_and_1_throttling: List[Backend]) -> None:
+        _lb = AsyncLoadBalancer(backends_0_and_1_throttling)
+
+        assert _lb.backends == backends_0_and_1_throttling
+        assert len(_lb.backends) == 3
+
+        _lb._check_throttling()
+
+        selected_index = _lb._get_backend_index()
+        assert selected_index == 2
+
+        available_backends = _lb._get_available_backends()
+        assert available_backends == 1
+
+
+    @pytest.mark.loadbalancer
+    def test_async_loadbalancer_instantiation_with_all_throttling(self, all_backends_throttling: List[Backend]) -> None:
+        _lb = AsyncLoadBalancer(all_backends_throttling)
+
+        assert _lb.backends == all_backends_throttling
+        assert len(_lb.backends) == 3
+
+        _lb._check_throttling()
+        available_backends = _lb._get_available_backends()
+        assert available_backends == 0
+
+        delay = _lb._get_soonest_retry_after()
+        assert delay == 1
+
+        response: httpx.Response = _lb._return_429()
         assert response.status_code == 429
+        assert response.headers["Retry-After"] == "1"
 
-@pytest.mark.loadbalancer
-def test_handle_failured_requests(client_failure_backends):
-    client = client_failure_backends
+    #@pytest.mark.skip(reason="This test is sleeping too long to always execute.")
+    @pytest.mark.loadbalancer
+    def test_async_loadbalancer_instantiation_with_all_throttling_then_resetting(self, all_backends_throttling: List[Backend]) -> None:
+        _lb = AsyncLoadBalancer(all_backends_throttling)
 
-    # Create a mock response for the transport
-    mock_response = httpx.Response(200, json={"id": "9ed7dasdasd-08ff-4ae1-8952-37e3a323eb08"})
+        assert _lb.backends == all_backends_throttling
+        assert len(_lb.backends) == 3
 
-    with patch('httpx.Client.send', return_value = mock_response):
-        req = client._build_request(create_final_request_options())
+        _lb._check_throttling()
+        available_backends = _lb._get_available_backends()
+        assert available_backends == 0
+        selected_index = _lb._get_backend_index()
+        assert selected_index == -1
+        delay = _lb._get_soonest_retry_after()
+        assert delay == 1
 
-        response = client._client._transport.handle_request(req)
+        time.sleep(6)
 
-        assert response.status_code == 429
+        _lb._check_throttling()
+        available_backends = _lb._get_available_backends()
+        assert available_backends == 3
 
-@pytest.mark.backend
-def test_backend_instantiation() -> None:
-    backend = Backend("oai-eastus.openai.azure.com", 1)
+    @pytest.mark.loadbalancer
+    def test_async_loadbalancer_different_priority(self, priority_backend_0_throttling: List[Backend]) -> None:
+        _lb = AsyncLoadBalancer(priority_backend_0_throttling)
+        selected_index = _lb._get_backend_index()
 
-    assert backend.host == "oai-eastus.openai.azure.com"
-    assert not backend.is_throttling
-    assert backend.priority == 1
-    assert backend.retry_after == datetime.min
-    assert backend.successful_call_count == 0
+        assert selected_index != 0
+        assert selected_index in (1, 2)
 
-@pytest.mark.loadbalancer
-def test_loadbalancer_instantiation(backends_same_priority: List[Backend]) -> None:
-    backends = backends_same_priority
+    @pytest.mark.asyncio
+    @pytest.mark.loadbalancer
+    async def test_async_loadbalancer_handle_successful_requests(self, async_client_successful_backends):
+        client = async_client_successful_backends
 
-    _lb = LoadBalancer(backends)
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
 
-    assert _lb.backends == backends
-    assert len(_lb.backends) == 3
+        with patch('httpx.AsyncClient.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
+            response = await client._client._transport.handle_async_request(req)
 
-    assert _lb.backends[0].host == "oai-eastus.openai.azure.com"
-    assert not _lb.backends[0].is_throttling
-    assert _lb.backends[0].priority == 1
-    assert _lb.backends[0].retry_after == datetime.min
-    assert _lb.backends[0].successful_call_count == 0
+            assert response.status_code == 200
 
-    assert _lb._backend_index == -1
-    assert _lb._available_backends == 1
-    assert isinstance(_lb._transport, httpx.Client)
+    @pytest.mark.asyncio
+    @pytest.mark.loadbalancer
+    async def test_async_loadbalancer_handle_failure_requests(self, async_client_failure_backends):
+        client = async_client_failure_backends
 
-@pytest.mark.loadbalancer
-def test_loadbalancer_instantiation_with_backends_0_and_1_throttling(backends_0_and_1_throttling: List[Backend]) -> None:
-    _lb = LoadBalancer(backends_0_and_1_throttling)
-    assert _lb.backends == backends_0_and_1_throttling
-    assert len(_lb.backends) == 3
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
 
-    _lb._check_throttling()
+        with patch('httpx.AsyncClient.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
 
-    selected_index = _lb._get_backend_index()
-    assert selected_index == 2
+            response = await client._client._transport.handle_async_request(req)
 
-    available_backends = _lb._get_available_backends()
-    assert available_backends == 1
-
-@pytest.mark.loadbalancer
-def test_loadbalancer_instantiation_with_all_throttling(all_backends_throttling: List[Backend]) -> None:
-    _lb = LoadBalancer(all_backends_throttling)
-    assert _lb.backends == all_backends_throttling
-    assert len(_lb.backends) == 3
-
-    _lb._check_throttling()
-    available_backends = _lb._get_available_backends()
-    assert available_backends == 0
-
-    delay = _lb._get_soonest_retry_after()
-    assert delay == 1
-
-    response: httpx.Response = _lb._return_429()
-    assert response.status_code == 429
-    assert response.headers["Retry-After"] == "1"
-
-#@pytest.mark.skip(reason="This test is sleeping too long to always execute.")
-@pytest.mark.loadbalancer
-def test_loadbalancer_instantiation_with_all_throttling_then_resetting(all_backends_throttling: List[Backend]) -> None:
-    _lb = LoadBalancer(all_backends_throttling)
-    assert _lb.backends == all_backends_throttling
-    assert len(_lb.backends) == 3
-
-    _lb._check_throttling()
-    available_backends = _lb._get_available_backends()
-    assert available_backends == 0
-    selected_index = _lb._get_backend_index()
-    assert selected_index == -1
-    delay = _lb._get_soonest_retry_after()
-    assert delay == 1
-
-    time.sleep(6)
-
-    _lb._check_throttling()
-    available_backends = _lb._get_available_backends()
-    assert available_backends == 3
-
-@pytest.mark.loadbalancer
-def test_loadbalancer_different_priority(priority_backend_0_throttling: List[Backend]) -> None:
-    _lb = LoadBalancer(priority_backend_0_throttling)
-    selected_index = _lb._get_backend_index()
-
-    assert selected_index != 0
-    assert selected_index in (1, 2)
+            assert response.status_code == 429
