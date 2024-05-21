@@ -202,7 +202,6 @@ class TestSynchronous:
         assert response.status_code == 429
         assert response.headers["Retry-After"] == "1"
 
-    # @pytest.mark.skip(reason="This test is sleeping too long to always execute.")
     @pytest.mark.loadbalancer
     def test_loadbalancer_instantiation_with_all_throttling_then_resetting(self, all_backends_throttling: List[Backend]) -> None:
         _lb = LoadBalancer(all_backends_throttling)
@@ -265,7 +264,6 @@ class TestSynchronous:
         # Create a sequence of mock responses for the transport
         mock_responses = [httpx.Response(429), httpx.Response(200)]
 
-        #with patch('httpx.Client.send', return_value = mock_response):
         with patch('httpx.Client.send', side_effect = mock_responses) as mock_send:
             req = client._build_request(create_final_request_options())
             response = client._client._transport.handle_request(req)
@@ -287,10 +285,10 @@ class TestSynchronous:
             req = client._build_request(create_final_request_options())
             response = client._client._transport.handle_request(req)
 
-            # Assert that send was called twice: once for the initial request and once for the retry
+            # Assert that send was called
             assert mock_send.call_count == 1
 
-            # Assert that the final response status code was 200
+            # Assert that the final response status code was 400
             assert response.status_code == 400
 
 # Asynchronous Tests
@@ -348,7 +346,6 @@ class TestAsynchronous:
         assert response.status_code == 429
         assert response.headers["Retry-After"] == "1"
 
-    # @pytest.mark.skip(reason="This test is sleeping too long to always execute.")
     @pytest.mark.loadbalancer
     def test_async_loadbalancer_instantiation_with_all_throttling_then_resetting(self, all_backends_throttling: List[Backend]) -> None:
         _lb = AsyncLoadBalancer(all_backends_throttling)
@@ -437,8 +434,8 @@ class TestAsynchronous:
             req = client._build_request(create_final_request_options())
             response = await client._client._transport.handle_async_request(req)
 
-            # Assert that send was called twice: once for the initial request and once for the retry
+            # Assert that send was called
             assert mock_send.call_count == 1
 
-            # Assert that the final response status code was 200
+            # Assert that the final response status code was 400
             assert response.status_code == 400
