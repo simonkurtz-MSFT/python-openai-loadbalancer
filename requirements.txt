@@ -7,6 +7,9 @@ httpx
 azure.identity
 openai
 
+# Building
+build
+
 # Testing
 coverage
 pytest
