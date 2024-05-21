@@ -1,10 +1,13 @@
 """Module providing a prioritized load-balancing for Azure OpenAI."""
 
+# Python Standard Library
 import logging
 import random
 import traceback
 from typing import List
 from datetime import datetime, MAXYEAR, MINYEAR, timedelta, timezone
+
+# Third-Party Libraries
 import httpx    # import the entirety of the httpx module to avoid potential conflicts with AsyncClient in the openai package by using httpx. notation
 
 class Backend:
@@ -59,7 +62,7 @@ class BaseLoadBalancer():
                 backend_priority = backend.priority
 
                 # If a backend has a (logically) higher priority (1 would be logically higher than 2, etc.), we select that priority, clear the available backends list
-                # which contains lower-priority backends, then add the higher-priority backend(s) to the list.
+                # which contains lower-priority backends thus far, then add the higher-priority backend(s) to the list.
                 if backend_priority < selected_priority:
                     selected_priority = backend_priority
                     available_backends.clear()
@@ -175,7 +178,7 @@ class AsyncLoadBalancer(BaseLoadBalancer):
         super().__init__(httpx.AsyncClient(), backends)
 
     # Public Methods
-    async def handle_async_request(self, request):
+    async def handle_async_request(self, request) -> httpx.Response:
         """Handles an asynchronous request by issuing an asynchronous request to an available backed."""
 
         self._log.info("Intercepted and now handling an asynchronous request.")
@@ -225,7 +228,7 @@ class LoadBalancer(BaseLoadBalancer):
         super().__init__(httpx.Client(), backends)
 
     # Public Methods
-    def handle_request(self, request):
+    def handle_request(self, request) -> httpx.Response:
         """Handles a synchronous request by issuing a request to an available backed."""
 
         self._log.info("Intercepted and now handling a synchronous request.")

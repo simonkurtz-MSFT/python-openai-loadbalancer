@@ -3,3 +3,6 @@ python_env
 dist
 build
 *.egg-info
+.coverage
+htmlcov
+.pytest_cache
