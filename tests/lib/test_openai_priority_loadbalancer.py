@@ -59,7 +59,7 @@ def create_final_request_options() -> FinalRequestOptions:
 # Factory fixture for backends
 @pytest.fixture
 def backends_factory():
-    def _backends_factory(priority, is_throttling, retry_after):
+    def _backends_factory(priority: int, is_throttling: bool, retry_after: int):
         # Start with a basic list of backends that will be modified depending on the passed arguments.
         backends: List[Backend] = [
             Backend("oai-eastus.openai.azure.com", 1),

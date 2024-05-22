@@ -45,7 +45,7 @@ backends: List[Backend] = [
 token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")
 
 # Standard Azure OpenAI Implementation (One Backend)
-def send_request(num_of_requests, azure_endpoint: str):
+def send_request(num_of_requests: int, azure_endpoint: str):
     """Function to send standard requests to the Azure OpenAI API."""
 
     try:
