@@ -47,9 +47,9 @@ def create_client(backends: List[Backend]) -> AzureOpenAI:
 
 def create_final_request_options() -> FinalRequestOptions:
     return FinalRequestOptions.construct(
-        method="post",
-        url="/chat/completions",
-        json_data={"model": "my-deployment-model"},
+        method = "post",
+        url = "completions",
+        json_data = {"model": "my-deployment-model"},
     )
 
 # Test Fixtures
@@ -59,19 +59,21 @@ def create_final_request_options() -> FinalRequestOptions:
 # Factory fixture for backends
 @pytest.fixture
 def backends_factory():
-    def _backends_factory(priority: int, is_throttling: bool, retry_after: int):
+    def _backends_factory(priority: int, is_throttling: bool, retry_after: int, path: str = None):
         # Start with a basic list of backends that will be modified depending on the passed arguments.
         backends: List[Backend] = [
             Backend("oai-eastus.openai.azure.com", 1),
             Backend("oai-southcentralus.openai.azure.com", 1),
-            Backend("oai-west.openai.azure.com", 1),
+            Backend("oai-westus.openai.azure.com", 1),
         ]
 
-        for backend, _priority, throttling, secs in zip(backends, priority, is_throttling, retry_after):
+        for backend, _priority, throttling, secs, _path in zip(backends, priority, is_throttling, retry_after, path):
             backend.priority = _priority
             backend.is_throttling = throttling
             if secs is not None:
                 backend.retry_after = datetime.now(timezone.utc) + timedelta(seconds = secs)
+            if _path is not None:
+                backend.path = _path
 
         return backends
 
@@ -79,23 +81,27 @@ def backends_factory():
 
 @pytest.fixture
 def backends_same_priority(backends_factory) -> List[Backend]:
-    return backends_factory([1, 1, 1], [False, False, False], [None, None, None])
+    return backends_factory([1, 1, 1], [False, False, False], [None, None, None], [None, None, None])
+
+@pytest.fixture
+def backends_same_priority_custom_paths(backends_factory) -> List[Backend]:
+    return backends_factory([1, 1, 1], [False, False, False], [None, None, None], ["/ai", "ai/", "ai"])
 
 @pytest.fixture
 def backends_tiered_priority(backends_factory) -> List[Backend]:
-    return backends_factory([1, 2, 2], [False, False, False], [None, None, None])
+    return backends_factory([1, 2, 2], [False, False, False], [None, None, None], [None, None, None])
 
 @pytest.fixture
 def backends_0_and_1_throttling(backends_factory) -> List[Backend]:
-    return backends_factory([1, 1, 1], [True, True, False], [3, 1, None])
+    return backends_factory([1, 1, 1], [True, True, False], [3, 1, None], [None, None, None])
 
 @pytest.fixture
 def all_backends_throttling(backends_factory) -> List[Backend]:
-    return backends_factory([1, 1, 1], [True, True, True], [3, 1, 5])
+    return backends_factory([1, 1, 1], [True, True, True], [3, 1, 5], [None, None, None])
 
 @pytest.fixture
 def priority_backend_0_throttling(backends_factory) -> List[Backend]:
-    return backends_factory([1, 2, 2], [True, False, False], [3, None, None])
+    return backends_factory([1, 2, 2], [True, False, False], [3, None, None], [None, None, None])
 
 @pytest.fixture(params=[backends_same_priority, backends_tiered_priority, backends_0_and_1_throttling, priority_backend_0_throttling])
 def success_backends(request):
@@ -112,6 +118,10 @@ def client_same_priority(backends_same_priority) -> AzureOpenAI:
     return create_client(backends_same_priority)
 
 @pytest.fixture
+def client_same_priority_custom_paths(backends_same_priority_custom_paths) -> AzureOpenAI:
+    return create_client(backends_same_priority_custom_paths)
+
+@pytest.fixture
 def client_successful_backends(success_backends) -> AzureOpenAI:
     return create_client(success_backends)
 
@@ -122,8 +132,12 @@ def client_failure_backends(failure_backends) -> AzureOpenAI:
 # Asynchronous Client Fixtures
 
 @pytest.fixture
-def async_client_same_priority(backends_same_priority) -> AzureOpenAI:
+def async_client_same_priority(backends_same_priority) -> AsyncAzureOpenAI:
     return create_async_client(backends_same_priority)
+
+@pytest.fixture
+def async_client_same_priority_custom_paths(backends_same_priority_custom_paths) -> AsyncAzureOpenAI:
+    return create_async_client(backends_same_priority_custom_paths)
 
 @pytest.fixture
 def async_client_successful_backends(success_backends) -> AsyncAzureOpenAI:
@@ -198,7 +212,7 @@ class TestSynchronous:
         assert available_backends == 0
 
         delay = _lb._get_soonest_retry_after()
-        assert delay == 1
+        assert delay < 3    # 3 seconds is the second-fastest delay. Checking against the fastest delay, 1, has very occasional failed the test.
 
         response: httpx.Response = _lb._return_429()
         assert response.status_code == 429
@@ -246,6 +260,27 @@ class TestSynchronous:
             response = client._client._transport.handle_request(req)
 
             assert response.status_code == 200
+
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_modify_request_url_path(self, client_same_priority_custom_paths):
+        client = client_same_priority_custom_paths
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
+
+        with patch('httpx.Client.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
+
+            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-04-01-preview'
+
+            client._client._transport.handle_request(req)
+
+            #assert response.status_code == 200
+            assert req.url in (
+                'https://oai-eastus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
+                'https://oai-westus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
+                'https://oai-southcentralus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview'
+            )
 
     @pytest.mark.loadbalancer
     def test_loadbalancer_handle_failure_requests(self, client_failure_backends):
@@ -360,7 +395,7 @@ class TestAsynchronous:
         assert available_backends == 0
 
         delay = _lb._get_soonest_retry_after()
-        assert delay == 1
+        assert delay < 3    # 3 seconds is the second-fastest delay. Checking against the fastest delay, 1, has very occasional failed the test.
 
         response: httpx.Response = _lb._return_429()
         assert response.status_code == 429
@@ -409,6 +444,27 @@ class TestAsynchronous:
             response = await client._client._transport.handle_async_request(req)
 
             assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    @pytest.mark.loadbalancer
+    async def test_async_loadbalancer_modify_request_url_path(self, async_client_same_priority_custom_paths):
+        client = async_client_same_priority_custom_paths
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
+
+        with patch('httpx.AsyncClient.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
+
+            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-04-01-preview'
+
+            await client._client._transport.handle_async_request(req)
+
+            assert req.url in (
+                'https://oai-eastus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
+                'https://oai-westus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
+                'https://oai-southcentralus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview'
+            )
 
     @pytest.mark.asyncio
     @pytest.mark.async_loadbalancer

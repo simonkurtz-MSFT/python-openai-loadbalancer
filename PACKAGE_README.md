@@ -83,9 +83,12 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
 
 1. Define a list of backends according to the *Load Balancer Backend Configuration* section below.
 
+   *Optionally, a path can be added (e.g. `"/ai"`), which gets prepended to the request path. This is an extraordinary, not a commonly needed functionality.*
+
     ```python
     backends: List[Backend] = [
         Backend("oai-eastus.openai.azure.com", 1),
+        Backend("oai-eastus.openai.azure.com", 1, "/ai"),
         Backend("oai-southcentralus.openai.azure.com", 1)
     ]
     ```

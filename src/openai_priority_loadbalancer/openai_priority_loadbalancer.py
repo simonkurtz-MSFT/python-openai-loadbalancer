@@ -13,9 +13,10 @@ class Backend:
     """Class representing a backend object used with Azure OpenAI, etc."""
 
     # Constructor
-    def __init__(self, host: str, priority: int):
+    def __init__(self, host: str, priority: int, path: str = None):
         # Public instance variables
         self.host = host
+        self.path = '' if path is None else path
         self.is_throttling = False
         self.priority = priority
         self.retry_after = datetime.min
@@ -155,11 +156,32 @@ class BaseLoadBalancer():
     def _modify_request(self, request: httpx.Request, backend_index: int) -> None:
         """Modifies the URL and Host header with the desired backend target. This ensures that the request is sent to the chosen backend server."""
 
+        backend: Backend = self.backends[backend_index]
+
         # Modify the request. Note that only the URL and Host header are being modified on the original request object. We make the smallest incision possible to avoid side effects.
         # Update URL and host header as both must match the backend server.
-        request.url = request.url.copy_with(host = self.backends[backend_index].host)
+        request.url = request.url.copy_with(host = backend.host)
+
+        # Path is optional and used more so for extraordinary setups.
+        if backend.path is not None and backend.path != "":
+            backend_path = "/" + backend.path.lstrip('/').rstrip('/')  # Ensure that the path is formatted as "/<path>"
+
+            # Convert the URL to a string
+            url_str = str(request.url)
+
+            # Find the third slash (after the scheme and the host)
+            third_slash_index = url_str.find('/', url_str.find('/', url_str.find('/') + 1) + 1)
+
+            # Insert the backend path into the path string
+            new_url_str = url_str[:third_slash_index] + backend_path + url_str[third_slash_index:]
+
+            # Convert the string back to a URL
+            request.url = httpx.URL(new_url_str)
+
         request.headers = request.headers.copy()    # We need to create a mutable copy of the headers before we modify and assign them back to the request object.
-        request.headers['host'] = self.backends[backend_index].host
+        request.headers['host'] = backend.host
+
+        self._log.debug("URL %s and host %s", request.url, request.headers['host'])
 
     def _return_429(self) -> httpx.Response:
         """Return an HTTP 429 response with a Retry-After header value. This is returned to the caller of this load balancer when no backends are available."""
