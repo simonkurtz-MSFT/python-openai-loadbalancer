@@ -47,9 +47,9 @@ def create_client(backends: List[Backend]) -> AzureOpenAI:
 
 def create_final_request_options() -> FinalRequestOptions:
     return FinalRequestOptions.construct(
-        method="post",
-        url="/chat/completions",
-        json_data={"model": "my-deployment-model"},
+        method = "post",
+        url = "completions",
+        json_data = {"model": "my-deployment-model"},
     )
 
 # Test Fixtures
@@ -64,7 +64,7 @@ def backends_factory():
         backends: List[Backend] = [
             Backend("oai-eastus.openai.azure.com", 1),
             Backend("oai-southcentralus.openai.azure.com", 1),
-            Backend("oai-west.openai.azure.com", 1),
+            Backend("oai-westus.openai.azure.com", 1),
         ]
 
         for backend, _priority, throttling, secs in zip(backends, priority, is_throttling, retry_after):
@@ -122,7 +122,7 @@ def client_failure_backends(failure_backends) -> AzureOpenAI:
 # Asynchronous Client Fixtures
 
 @pytest.fixture
-def async_client_same_priority(backends_same_priority) -> AzureOpenAI:
+def async_client_same_priority(backends_same_priority) -> AsyncAzureOpenAI:
     return create_async_client(backends_same_priority)
 
 @pytest.fixture
