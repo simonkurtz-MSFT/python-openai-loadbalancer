@@ -37,7 +37,14 @@ jobs:
       continue-on-error: true
     - name: Test with pytest
       run: |
-        coverage run -m pytest -v && coverage html
+        coverage run -m pytest -v --junitxml=junit/test-results-${{ matrix.python-version }}.xml && coverage html
+    - name: Upload pytest test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: pytest-results-${{ matrix.python-version }}
+        path: junit/test-results-${{ matrix.python-version }}.xml
+      # Use always() to always run this step to publish test results when there are test failures
+      if: ${{ always() }}
     - name: Upload code coverage to GitHub Artifacts
       uses: actions/upload-artifact@v4.3.3
       with:
