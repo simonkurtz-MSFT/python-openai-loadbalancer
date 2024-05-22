@@ -288,14 +288,14 @@ logging.basicConfig(
 
 # Ensure that variables are set.
 if MODEL == "<your-aoai-model>":
-    raise ValueError("MODEL must be set to a valid AOAI model.")
+    raise ValueError("MODEL must be set to a valid AOAI model.\n")
 
 if "xxxxxxxx" in AZURE_ENDPOINT:
-    raise ValueError("AZURE_ENDPOINT must be set to a valid endpoint.")
+    raise ValueError("AZURE_ENDPOINT must be set to a valid endpoint.\n")
 
 for backend in backends:
     if "xxxxxxxx" in backend.host:
-        raise ValueError(f"Backend {backend.host} must be set to a valid endpoint.")
+        raise ValueError(f"Backend {backend.host} must be set to a valid endpoint.\n")
 
 # Instantiate the TestExecutions object to understand which tests to run.
 test_executions = TestExecutions()
