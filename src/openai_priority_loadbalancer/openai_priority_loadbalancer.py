@@ -27,7 +27,7 @@ class BaseLoadBalancer():
     """Logically abstracts the BaseLoadBalancer class which should be inherited by the synchronous and asynchronous load balancer classes."""
 
     # Constructor
-    def __init__(self, transport, backends: List[Backend]):
+    def __init__(self, transport: httpx.BaseTransport, backends: List[Backend]):
         # Public instance variables
         self.backends = backends
 
@@ -113,7 +113,7 @@ class BaseLoadBalancer():
 
         return delay
 
-    def _handle_200_399_response(self, request, response, backend_index) -> httpx.Response:
+    def _handle_200_399_response(self, request: httpx.Request, response: httpx.Response, backend_index: int) -> httpx.Response:
         """Handle a successful response from the backend."""
 
         self._log.info("Request sent to server: %s, Status code: %s", request.url, response.status_code)
@@ -121,7 +121,7 @@ class BaseLoadBalancer():
 
         return response
 
-    def _handle_429_5xx_response(self, request, response, backend_index) -> None:
+    def _handle_429_5xx_response(self, request: httpx.Request, response: httpx.Response, backend_index: int) -> None:
         """Handle a 429 or 5xx response from the backend by identifying the retry-after interval, if available, and updating the available backends."""
 
         self._log.info("Request sent to server: %s, Status code: %s - FAIL", request.url, response.status_code)
@@ -145,14 +145,14 @@ class BaseLoadBalancer():
         # 3) Update the available backends.
         self._get_available_backends()
 
-    def _handle_4xx_response(self, request, response) -> httpx.Response:
+    def _handle_4xx_response(self, request: httpx.Request, response: httpx.Response) -> httpx.Response:
         """Handle a 4xx response other than 429 from the backend."""
 
         self._log.warning("Request sent to server: %s, Status code: %s - FAIL", request.url, response.status_code)
 
         return response
 
-    def _modify_request(self, request, backend_index) -> None:
+    def _modify_request(self, request: httpx.Request, backend_index: int) -> None:
         """Modifies the URL and Host header with the desired backend target. This ensures that the request is sent to the chosen backend server."""
 
         # Modify the request. Note that only the URL and Host header are being modified on the original request object. We make the smallest incision possible to avoid side effects.
@@ -178,7 +178,7 @@ class AsyncLoadBalancer(BaseLoadBalancer):
         super().__init__(httpx.AsyncClient(), backends)
 
     # Public Methods
-    async def handle_async_request(self, request) -> httpx.Response:
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         """Handles an asynchronous request by issuing an asynchronous request to an available backed."""
 
         self._log.info("Intercepted and now handling an asynchronous request.")
@@ -189,7 +189,7 @@ class AsyncLoadBalancer(BaseLoadBalancer):
         response = None
 
         while self._available_backends > 0:
-            # 1) Since we have available backends determine the appropriate backend to use.
+            # 1) Since we have available backends, determine the appropriate backend to use.
             backend_index = self._get_backend_index()
 
             # 2) Modify the intercepted request.
@@ -202,12 +202,13 @@ class AsyncLoadBalancer(BaseLoadBalancer):
             #    If 429 or a 5xx error, we continue the loop and retry with another backend, if available.
             #    If 200-399, we return the successful response.
             #    If any other 4xx error, we break the loop and return the response as we don't explicitly handle these client errors.
-            if response is not None and (response.status_code == 429 or response.status_code >= 500):
-                self._handle_429_5xx_response(request, response, backend_index)
-                continue
+            if response is not None:
+                if response.status_code == 429 or response.status_code >= 500:
+                    self._handle_429_5xx_response(request, response, backend_index)
+                    continue
 
-            if response is not None and (response.status_code >= 200 and response.status_code <= 399):
-                return self._handle_200_399_response(request, response, backend_index)
+                if response.status_code >= 200 and response.status_code <= 399:
+                    return self._handle_200_399_response(request, response, backend_index)
 
             return self._handle_4xx_response(request, response)
 
@@ -222,7 +223,7 @@ class LoadBalancer(BaseLoadBalancer):
         super().__init__(httpx.Client(), backends)
 
     # Public Methods
-    def handle_request(self, request) -> httpx.Response:
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
         """Handles a synchronous request by issuing a request to an available backed."""
 
         self._log.info("Intercepted and now handling a synchronous request.")
@@ -233,7 +234,7 @@ class LoadBalancer(BaseLoadBalancer):
         response = None
 
         while self._available_backends > 0:
-            # 1) Since we have available backends determine the appropriate backend to use.
+            # 1) Since we have available backends, determine the appropriate backend to use.
             backend_index = self._get_backend_index()
 
             # 2) Modify the intercepted request.
@@ -246,12 +247,13 @@ class LoadBalancer(BaseLoadBalancer):
             #    If 429 or a 5xx error, we continue the loop and retry with another backend, if available.
             #    If 200-399, we return the successful response.
             #    If any other 4xx error, we break the loop and return the response as we don't explicitly handle these client errors.
-            if response is not None and (response.status_code == 429 or response.status_code >= 500):
-                self._handle_429_5xx_response(request, response, backend_index)
-                continue
+            if response is not None:
+                if response.status_code == 429 or response.status_code >= 500:
+                    self._handle_429_5xx_response(request, response, backend_index)
+                    continue
 
-            if response is not None and (response.status_code >= 200 and response.status_code <= 399):
-                return self._handle_200_399_response(request, response, backend_index)
+                if response.status_code >= 200 and response.status_code <= 399:
+                    return self._handle_200_399_response(request, response, backend_index)
 
             return self._handle_4xx_response(request, response)
 
