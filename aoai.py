@@ -391,17 +391,17 @@ if test_executions.async_stream_load_balanced:
     async_stream_lb_end_time = time.time()
 
 # Statistics
-width = 7
+WIDTH = 7
 
 print(f"\n{'*' * 100}\n")
-print(f"Number of requests                              : {str(NUM_OF_REQUESTS).rjust(width)}\n")
+print(f"Number of requests per approach                 : {str(NUM_OF_REQUESTS).rjust(WIDTH)}\n")
 
-print(f"Total requests                                  : {str(counter).rjust(width)}")
-print(f"Successful requests                             : {str(success_counter).rjust(width)}")
-print(f"Failed requests                                 : {str(failure_counter).rjust(width)}\n")
+print(f"Total requests                                  : {str(counter).rjust(WIDTH)}")
+print(f"Successful requests                             : {str(success_counter).rjust(WIDTH)}")
+print(f"Failed requests                                 : {str(failure_counter).rjust(WIDTH)}\n")
 
-print(f"Successful requests percentage                  : {('{:.2%}'.format(success_counter / counter)).rjust(width)}")
-print(f"Failed requests percentage                      : {('{:.2%}'.format(failure_counter / counter)).rjust(width)}\n")
+print(f"Successful requests percentage                  : {('{:.2%}'.format(success_counter / counter)).rjust(WIDTH)}")
+print(f"Failed requests percentage                      : {('{:.2%}'.format(failure_counter / counter)).rjust(WIDTH)}\n")
 
 
 if test_executions.standard:
