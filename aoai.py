@@ -48,6 +48,8 @@ token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://co
 def send_request(num_of_requests: int, azure_endpoint: str):
     """Function to send standard requests to the Azure OpenAI API."""
 
+    global counter, success_counter
+
     try:
         client = AzureOpenAI(
             azure_endpoint = azure_endpoint,
@@ -66,6 +68,8 @@ def send_request(num_of_requests: int, azure_endpoint: str):
                 ]
             )
 
+            success_counter += 1
+            counter += 1
             print(f"{datetime.now()}:\n{response}\n\n\n")
 
     except NotFoundError as e:
@@ -78,6 +82,8 @@ def send_request(num_of_requests: int, azure_endpoint: str):
 # Load-balanced Azure OpenAI Implementation (Multiple Backends)
 def send_loadbalancer_request(num_of_requests: int):
     """Function to send load-balanced requests to the Azure OpenAI API."""
+
+    global counter, failure_counter, success_counter
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
@@ -102,10 +108,20 @@ def send_loadbalancer_request(num_of_requests: int):
                     ]
                 )
 
+                success_counter += 1
                 print(f"{datetime.now()}:\n{response}\n\n\n")
+            except APIError as e:
+                if e.code == 429:
+                    print(f"{datetime.now()}: Rate limit exceeded. Python OpenAI Library has exhausted all of its retries.")
+                else:
+                    print(f"{datetime.now()}: Python OpenAI Library request failure.")
+
+                failure_counter += 1
             except Exception:
-                print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
                 traceback.print_exc()
+                failure_counter += 1
+
+            counter += 1
 
     except NotFoundError as e:
         print("openai.NotFoundError:", vars(e))
@@ -116,6 +132,8 @@ def send_loadbalancer_request(num_of_requests: int):
 
 async def send_async_loadbalancer_request(num_of_requests: int):
     """Function to send load-balanced requests to the Azure OpenAI API."""
+
+    global counter, failure_counter, success_counter
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
@@ -140,10 +158,20 @@ async def send_async_loadbalancer_request(num_of_requests: int):
                     ]
                 )
 
+                success_counter += 1
                 print(f"{datetime.now()}:\n{response}\n\n\n")
+            except APIError as e:
+                if e.code == 429:
+                    print(f"{datetime.now()}: Rate limit exceeded. Python OpenAI Library has exhausted all of its retries.")
+                else:
+                    print(f"{datetime.now()}: Python OpenAI Library request failure.")
+
+                failure_counter += 1
             except Exception:
-                print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
                 traceback.print_exc()
+                failure_counter += 1
+
+            counter += 1
 
     except NotFoundError as e:
         print("openai.NotFoundError:", vars(e))
@@ -155,6 +183,8 @@ async def send_async_loadbalancer_request(num_of_requests: int):
 # Reference design: https://cookbook.openai.com/examples/how_to_stream_completions
 def send_stream_loadbalancer_request(num_of_requests: int):
     """Function to send load-balanced streaming requests to the Azure OpenAI API."""
+
+    global counter, failure_counter, success_counter
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
@@ -201,10 +231,20 @@ def send_stream_loadbalancer_request(num_of_requests: int):
                 collected_messages = [m for m in collected_messages if m is not None]   # Clean None in collected_messages
                 full_reply_content = ''.join(collected_messages)
                 print(f"\nFull conversation received: {full_reply_content}\n\n")
+                success_counter += 1
 
+            except APIError as e:
+                if e.code == 429:
+                    print(f"{datetime.now()}: Rate limit exceeded. Python OpenAI Library has exhausted all of its retries.")
+                else:
+                    print(f"{datetime.now()}: Python OpenAI Library request failure.")
+
+                failure_counter += 1
             except Exception:
-                print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
                 traceback.print_exc()
+                failure_counter += 1
+
+            counter += 1
 
     except NotFoundError as e:
         print("openai.NotFoundError:", vars(e))
@@ -216,6 +256,8 @@ def send_stream_loadbalancer_request(num_of_requests: int):
 # Reference design: https://cookbook.openai.com/examples/how_to_stream_completions
 async def send_async_stream_loadbalancer_request(num_of_requests: int):
     """Function to send load-balanced streaming requests to the Azure OpenAI API."""
+
+    global counter, failure_counter, success_counter
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
@@ -263,10 +305,21 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int):
                     collected_messages = [m for m in collected_messages if m is not None]   # Clean None in collected_messages
                     full_reply_content = ''.join(collected_messages)
                     print(f"\nFull conversation received: {full_reply_content}\n\n")
+                    success_counter += 1
 
+            except APIError as e:
+                if e.code == 429:
+                    print(f"{datetime.now()}: Rate limit exceeded. Python OpenAI Library has exhausted all of its retries.")
+                else:
+                    print(f"{datetime.now()}: Python OpenAI Library request failure.")
+
+                failure_counter += 1
             except Exception:
-                print(f"{datetime.now()}: Request failure. Python OpenAI Library has exhausted all of its retries.")
                 traceback.print_exc()
+
+                failure_counter += 1
+
+            counter += 1
 
     except NotFoundError as e:
         print("openai.NotFoundError:", vars(e))
@@ -278,6 +331,8 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int):
 ##########################################################################################################################################################
 
 # >>> TEST HARNESS <<<
+
+success_counter = failure_counter = counter = 0
 
 # Set up the logger: https://www.machinelearningplus.com/python/python-logging-guide/
 logging.basicConfig(
@@ -336,8 +391,18 @@ if test_executions.async_stream_load_balanced:
     async_stream_lb_end_time = time.time()
 
 # Statistics
+width = 7
+
 print(f"\n{'*' * 100}\n")
-print(f"Number of requests                              : {NUM_OF_REQUESTS}\n")
+print(f"Number of requests                              : {str(NUM_OF_REQUESTS).rjust(width)}\n")
+
+print(f"Total requests                                  : {str(counter).rjust(width)}")
+print(f"Successful requests                             : {str(success_counter).rjust(width)}")
+print(f"Failed requests                                 : {str(failure_counter).rjust(width)}\n")
+
+print(f"Successful requests percentage                  : {('{:.2%}'.format(success_counter / counter)).rjust(width)}")
+print(f"Failed requests percentage                      : {('{:.2%}'.format(failure_counter / counter)).rjust(width)}\n")
+
 
 if test_executions.standard:
     print(f"Single instance operation duration              : {end_time - start_time:.2f} seconds")
