@@ -396,12 +396,13 @@ SECONDS_WIDTH = WIDTH - 8
 
 print(f"\n{'*' * 100}\n")
 print(f"Requests per approach                           : {str(NUM_OF_REQUESTS).rjust(WIDTH)}")
+print(f"Number of approaches                            : {str(sum(1 for value in vars(test_executions).values() if value is True)).rjust(WIDTH)}\n")
 
 print(f"Total requests                                  : {str(counter).rjust(WIDTH)}")
 print(f"Total successful requests                       : {str(success_counter).rjust(WIDTH)}")
 print(f"Total failed requests                           : {str(failure_counter).rjust(WIDTH)}")
-print(f"Successful requests percentage                  : {('{:.2%}'.format(success_counter / counter)).rjust(WIDTH)}")
-print(f"Failed requests percentage                      : {('{:.2%}'.format(failure_counter / counter)).rjust(WIDTH)}\n")
+print(f"Total successful requests percentage            : {('{:.2%}'.format(success_counter / counter)).rjust(WIDTH)}")
+print(f"Total Failed requests percentage                : {('{:.2%}'.format(failure_counter / counter)).rjust(WIDTH)}\n")
 
 if test_executions.standard:
     print(f"Single instance operation duration              : {end_time - start_time:>{SECONDS_WIDTH}.2f} seconds")
