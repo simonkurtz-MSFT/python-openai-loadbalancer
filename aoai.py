@@ -11,7 +11,7 @@ from datetime import datetime
 # https://github.com/openai/openai-python/releases/tag/v1.17.0
 import httpx
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-from openai import AzureOpenAI, AsyncAzureOpenAI, NotFoundError
+from openai import AzureOpenAI, AsyncAzureOpenAI, NotFoundError, APIError
 from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncLoadBalancer, LoadBalancer, Backend
 
 ##########################################################################################################################################################
@@ -391,28 +391,27 @@ if test_executions.async_stream_load_balanced:
     async_stream_lb_end_time = time.time()
 
 # Statistics
-WIDTH = 7
+WIDTH = 16
+SECONDS_WIDTH = WIDTH - 8
 
 print(f"\n{'*' * 100}\n")
-print(f"Number of requests per approach                 : {str(NUM_OF_REQUESTS).rjust(WIDTH)}\n")
+print(f"Requests per approach                           : {str(NUM_OF_REQUESTS).rjust(WIDTH)}")
 
 print(f"Total requests                                  : {str(counter).rjust(WIDTH)}")
-print(f"Successful requests                             : {str(success_counter).rjust(WIDTH)}")
-print(f"Failed requests                                 : {str(failure_counter).rjust(WIDTH)}\n")
-
+print(f"Total successful requests                       : {str(success_counter).rjust(WIDTH)}")
+print(f"Total failed requests                           : {str(failure_counter).rjust(WIDTH)}")
 print(f"Successful requests percentage                  : {('{:.2%}'.format(success_counter / counter)).rjust(WIDTH)}")
 print(f"Failed requests percentage                      : {('{:.2%}'.format(failure_counter / counter)).rjust(WIDTH)}\n")
 
-
 if test_executions.standard:
-    print(f"Single instance operation duration              : {end_time - start_time:.2f} seconds")
+    print(f"Single instance operation duration              : {end_time - start_time:>{SECONDS_WIDTH}.2f} seconds")
 if test_executions.load_balanced:
-    print(f"Load-balancer operation duration                : {lb_end_time - lb_start_time:.2f} seconds")
+    print(f"Load-balancer operation duration                : {lb_end_time - lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
 if test_executions.async_load_balanced:
-    print(f"Async Load-balancer operation duration          : {async_lb_end_time - async_lb_start_time:.2f} seconds")
+    print(f"Async Load-balancer operation duration          : {async_lb_end_time - async_lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
 if test_executions.stream_load_balanced:
-    print(f"Stream Load-balancer operation duration         : {stream_lb_end_time - stream_lb_start_time:.2f} seconds")
+    print(f"Stream Load-balancer operation duration         : {stream_lb_end_time - stream_lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
 if test_executions.async_stream_load_balanced:
-    print(f"Stream Async Load-balancer operation duration   : {async_stream_lb_end_time - async_stream_lb_start_time:.2f} seconds")
+    print(f"Stream Async Load-balancer operation duration   : {async_stream_lb_end_time - async_stream_lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
 
 print("\n\n")
