@@ -46,7 +46,7 @@ Locally, you can log into Azure via the CLI and the steps below and use the `Azu
 
 It's best to avoid using the Azure OpenAI instances' keys as that could a) accidentally leave credentials in your source code, and b) the keys are different for each instance, requiring maintenance, environment-specific keys, key rotations, etc. However, if you need to use keys, it is possible to set them for each Azure OpenAI backend.
 
-When a backend's `api_key` property is set, the `api-key` header will be replaced with `<api_key value>` prior to sending the request to the corresponding Azure OpenAI instance.
+When a backend's `api_key` property is set, the `api-key` header will be replaced with the `<api_key>` value prior to sending the request to the corresponding Azure OpenAI instance.
 
 ## Getting Started
 

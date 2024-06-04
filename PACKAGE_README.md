@@ -79,7 +79,9 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
 *Importing `httpx` lets us use `httpx.Client` and `httpx.AsyncClient`. This avoids having to update openai to at least
 [1.17.0](https://github.com/openai/openai-python/releases/tag/v1.17.0). The `openai` properties for `DefaultHttpxClient` and `DefaultAsyncHttpxClient` are mere wrappers for `httpx.Client` and `httpx.AsyncClient`.*
 
-### Configuring the Backends and Load Balancer
+### Configuring the Backends and Load Balancer with a Token Provider
+
+**We strongly recommend the use of a managed identity in Azure and the use of the `AzureDefaultCredential` locally.** This section details that approach.
 
 1. Define a list of backends according to the *Load Balancer Backend Configuration* section below.
 
@@ -88,8 +90,8 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
     ```python
     backends: List[Backend] = [
         Backend("oai-eastus.openai.azure.com", 1),
-        Backend("oai-eastus.openai.azure.com", 1, "/ai"),
         Backend("oai-southcentralus.openai.azure.com", 1)
+        Backend("oai-westus.openai.azure.com", 1, "/ai"),
     ]
     ```
 
@@ -116,6 +118,53 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
     client = AsyncAzureOpenAI(
         azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
         azure_ad_token_provider = token_provider,               # Your authentication may vary. Please adjust accordingly.
+        api_version = "2024-04-01-preview",
+        http_client = httpx.AsyncClient(transport = lb)         # Inject the asynchronous load balancer as the transport in a new default async httpx client.
+    )
+    ```
+
+### Configuring the Backends and Load Balancer with individual Azure OpenAI API Keys
+
+It's best to avoid using the Azure OpenAI instances' keys as that could a) accidentally leave credentials in your source code, and b) the keys are different for each instance, requiring maintenance, environment-specific keys, key rotations, etc.
+However, if you do need to use keys, it is possible to set them for each Azure OpenAI backend starting with release `1.1.0`.
+
+When a backend's `api_key` property is set, the `api-key` header will be replaced with the `<api_key>` value prior to sending the request to the corresponding Azure OpenAI instance. Please see below for examples.
+
+1. Define a list of backends according to the *Load Balancer Backend Configuration* section below. This includes the API key as the last parameter (below values are mock placeholders).
+
+   *Optionally, a path can be added (e.g. `"/ai"`), which gets prepended to the request path. This is an extraordinary, not a commonly needed functionality.*
+
+    ```python
+    backends: List[Backend] = [
+        Backends("oai-eastus.openai.azure.com", 1, None, 'c3d116584360f9960b38cccc5f44caba'),
+        Backends("oai-southcentralus.openai.azure.com", 1, None, '21c14252762502e8fc78b61e21db114f'),
+        Backends("oai-westus.openai.azure.com", 1, "/ai", 'd6370785453b2b9c331a94cb1b7aaa36')
+    ]
+    ```
+
+1. Instantiate the load balancer and inject a new httpx client with the load balancer as the new transport.
+
+    **Synchronous**
+
+    ```python
+    lb = LoadBalancer(backends)
+
+    client = AzureOpenAI(
+        azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+        api_key = "obtain_from_load_balancer",                  # the value is not used, but it must be set
+        api_version = "2024-04-01-preview",
+        http_client = httpx.Client(transport = lb)              # Inject the synchronous load balancer as the transport in a new default httpx client.
+    )
+    ```
+
+    **Asynchronous**
+
+    ```python
+    lb = AsyncLoadBalancer(backends)
+
+    client = AsyncAzureOpenAI(
+        azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+        api_key = "obtain_from_load_balancer",                  # the value is not used, but it must be set
         api_version = "2024-04-01-preview",
         http_client = httpx.AsyncClient(transport = lb)         # Inject the asynchronous load balancer as the transport in a new default async httpx client.
     )
@@ -188,6 +237,19 @@ backends = [
     Backends("oai-eastus-xxxxxxxx.openai.azure.com", 1),
     Backends("oai-southcentralus-xxxxxxxx.openai.azure.com", 2),
     Backends("oai-westus-xxxxxxxx.openai.azure.com", 3)
+]
+```
+
+### Backend Authentication
+
+While we strongly recommend the use of managed identities, it is possible to use the Azure OpenAI API keys for each respective Azure OpenAI instance. Note that you are solely responsible for the safeguarding and injection of these keys.
+
+```python
+# Define the backends and their priority
+backends = [
+    Backends("oai-eastus-xxxxxxxx.openai.azure.com", 1, None, 'c3d116584360f9960b38cccc5f44caba'),
+    Backends("oai-southcentralus-xxxxxxxx.openai.azure.com", 1 None, '21c14252762502e8fc78b61e21db114f'),
+    Backends("oai-westus-xxxxxxxx.openai.azure.com", 1, None, 'd6370785453b2b9c331a94cb1b7aaa36')
 ]
 ```
 
