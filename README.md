@@ -38,7 +38,15 @@ It's also good to have some knowledge of authentication and identities.
 
 ## Authentication
 
-Locally, you can log into Azure via the CLI and the steps below and use the `AzureDefaultCredential` (what I use in my example). When deploying this application in Azure, it's recommended to use a managed identity for authentication. It's best to avoid using the Azure OpenAI instances' keys as that could a) accidentally leave credentials in your source code, and b) the keys are different for each instance, which would probably require expanding upon the `Backends` class. Best to just avoid keys.
+**We strongly recommend the use of a managed identity in Azure and the use of the `AzureDefaultCredential` locally.**
+
+Locally, you can log into Azure via the CLI and the steps below and use the `AzureDefaultCredential` (what I use in my example). When deploying this application in Azure, it's recommended to use a managed identity for authentication.
+
+### Azure OpenAI Keys
+
+It's best to avoid using the Azure OpenAI instances' keys as that could a) accidentally leave credentials in your source code, and b) the keys are different for each instance, requiring maintenance, environment-specific keys, key rotations, etc. However, if you need to use keys, it is possible to set them for each Azure OpenAI backend.
+
+When a backend's `api_key` property is set, the `api-key` header will be replaced with the `<api_key>` value prior to sending the request to the corresponding Azure OpenAI instance.
 
 ## Getting Started
 
@@ -51,9 +59,12 @@ Locally, you can log into Azure via the CLI and the steps below and use the `Azu
 
 ### Configuration
 
+Execute the following git command to ensure that updates to `config.py` are not tracked and therefore not committed. This prevents accidental check-ins of real keys and values:
+`git update-index --assume-unchanged config.py`
+
 For the load-balanced approach, please use the same model across all instances.
 
-1. Open [aoai.py](./aoai.py).
+1. Open [config.py](./config.py).
 1. Replace `<your-aoai-model>` with the name of your Azure OpenAI model.
 1. Replace `<your-aoai-instance>` with the primary/single Azure OpenAI instance.
 1. Replace `<your-aoai-instance-1>`, `<your-aoai-instance-2>`, `<your-aoai-instance-3>` with all the Azure OpenAI instances you want to load-balance across. Delete entries you don't need. See [Load Balancer Backend Configuration](#load-balancer-backend-configuration) for details.
@@ -191,5 +202,18 @@ backends = [
     Backends("oai-eastus-xxxxxxxx.openai.azure.com", 1),
     Backends("oai-southcentralus-xxxxxxxx.openai.azure.com", 2),
     Backends("oai-westus-xxxxxxxx.openai.azure.com", 3)
+]
+```
+
+### Backend Authentication
+
+While we strongly recommend the use of managed identities, it is possible to use the Azure OpenAI API keys for each respective Azure OpenAI instance. Note that you are solely responsible for the safeguarding and injection of these keys.
+
+```python
+# Define the backends and their priority
+backends = [
+    Backends("oai-eastus-xxxxxxxx.openai.azure.com", 1, None, 'c3d116584360f9960b38cccc5f44caba'),
+    Backends("oai-southcentralus-xxxxxxxx.openai.azure.com", 1 None, '21c14252762502e8fc78b61e21db114f'),
+    Backends("oai-westus-xxxxxxxx.openai.azure.com", 1, None, 'd6370785453b2b9c331a94cb1b7aaa36')
 ]
 ```

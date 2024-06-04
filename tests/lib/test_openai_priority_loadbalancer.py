@@ -59,7 +59,7 @@ def create_final_request_options() -> FinalRequestOptions:
 # Factory fixture for backends
 @pytest.fixture
 def backends_factory():
-    def _backends_factory(priority: int, is_throttling: bool, retry_after: int, path: str = None):
+    def _backends_factory(priority: int, is_throttling: bool, retry_after: int, path: str = None, api_key: str = None):
         # Start with a basic list of backends that will be modified depending on the passed arguments.
         backends: List[Backend] = [
             Backend("oai-eastus.openai.azure.com", 1),
@@ -67,11 +67,16 @@ def backends_factory():
             Backend("oai-westus.openai.azure.com", 1),
         ]
 
-        for backend, _priority, throttling, secs, _path in zip(backends, priority, is_throttling, retry_after, path):
-            backend.priority = _priority
+        for backend, _priority, throttling, secs, _path, _api_key in zip(backends, priority, is_throttling, retry_after, path, api_key):
             backend.is_throttling = throttling
+            backend.priority = _priority
+
+            if _api_key is not None:
+                backend.api_key = _api_key
+
             if secs is not None:
                 backend.retry_after = datetime.now(timezone.utc) + timedelta(seconds = secs)
+
             if _path is not None:
                 backend.path = _path
 
@@ -81,27 +86,31 @@ def backends_factory():
 
 @pytest.fixture
 def backends_same_priority(backends_factory) -> List[Backend]:
-    return backends_factory([1, 1, 1], [False, False, False], [None, None, None], [None, None, None])
+    return backends_factory([1, 1, 1], [False, False, False], [None, None, None], [None, None, None], [None, None, None])
 
 @pytest.fixture
 def backends_same_priority_custom_paths(backends_factory) -> List[Backend]:
-    return backends_factory([1, 1, 1], [False, False, False], [None, None, None], ["/ai", "ai/", "ai"])
+    return backends_factory([1, 1, 1], [False, False, False], [None, None, None], ["/ai", "ai/", "ai"], [None, None, None])
+
+@pytest.fixture
+def backends_same_priority_api_keys(backends_factory) -> List[Backend]:
+    return backends_factory([1, 1, 1], [False, False, False], [None, None, None], [None, None, None], ["c3d116584360f9960b38cccc5f44caba", "21c14252762502e8fc78b61e21db114f", "d6370785453b2b9c331a94cb1b7aaa36"])
 
 @pytest.fixture
 def backends_tiered_priority(backends_factory) -> List[Backend]:
-    return backends_factory([1, 2, 2], [False, False, False], [None, None, None], [None, None, None])
+    return backends_factory([1, 2, 2], [False, False, False], [None, None, None], [None, None, None], [None, None, None])
 
 @pytest.fixture
 def backends_0_and_1_throttling(backends_factory) -> List[Backend]:
-    return backends_factory([1, 1, 1], [True, True, False], [3, 1, None], [None, None, None])
+    return backends_factory([1, 1, 1], [True, True, False], [3, 1, None], [None, None, None], [None, None, None])
 
 @pytest.fixture
 def all_backends_throttling(backends_factory) -> List[Backend]:
-    return backends_factory([1, 1, 1], [True, True, True], [3, 1, 5], [None, None, None])
+    return backends_factory([1, 1, 1], [True, True, True], [3, 1, 5], [None, None, None], [None, None, None])
 
 @pytest.fixture
 def priority_backend_0_throttling(backends_factory) -> List[Backend]:
-    return backends_factory([1, 2, 2], [True, False, False], [3, None, None], [None, None, None])
+    return backends_factory([1, 2, 2], [True, False, False], [3, None, None], [None, None, None], [None, None, None])
 
 @pytest.fixture(params=[backends_same_priority, backends_tiered_priority, backends_0_and_1_throttling, priority_backend_0_throttling])
 def success_backends(request):
@@ -122,6 +131,10 @@ def client_same_priority_custom_paths(backends_same_priority_custom_paths) -> Az
     return create_client(backends_same_priority_custom_paths)
 
 @pytest.fixture
+def client_same_priority_api_keys(backends_same_priority_api_keys) -> AzureOpenAI:
+    return create_client(backends_same_priority_api_keys)
+
+@pytest.fixture
 def client_successful_backends(success_backends) -> AzureOpenAI:
     return create_client(success_backends)
 
@@ -138,6 +151,10 @@ def async_client_same_priority(backends_same_priority) -> AsyncAzureOpenAI:
 @pytest.fixture
 def async_client_same_priority_custom_paths(backends_same_priority_custom_paths) -> AsyncAzureOpenAI:
     return create_async_client(backends_same_priority_custom_paths)
+
+@pytest.fixture
+def async_client_same_priority_api_keys(backends_same_priority_api_keys) -> AsyncAzureOpenAI:
+    return create_async_client(backends_same_priority_api_keys)
 
 @pytest.fixture
 def async_client_successful_backends(success_backends) -> AsyncAzureOpenAI:
@@ -275,11 +292,30 @@ class TestSynchronous:
 
             client._client._transport.handle_request(req)
 
-            #assert response.status_code == 200
             assert req.url in (
                 'https://oai-eastus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
                 'https://oai-westus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
                 'https://oai-southcentralus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview'
+            )
+
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_use_api_keys(self, client_same_priority_api_keys):
+        client = client_same_priority_api_keys
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
+
+        with patch('httpx.Client.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
+
+            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-04-01-preview'
+
+            client._client._transport.handle_request(req)
+
+            assert req.headers['api-key'] in (
+                'c3d116584360f9960b38cccc5f44caba',
+                '21c14252762502e8fc78b61e21db114f',
+                'd6370785453b2b9c331a94cb1b7aaa36'
             )
 
     @pytest.mark.loadbalancer
@@ -464,6 +500,27 @@ class TestAsynchronous:
                 'https://oai-eastus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
                 'https://oai-westus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
                 'https://oai-southcentralus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview'
+            )
+
+    @pytest.mark.asyncio
+    @pytest.mark.loadbalancer
+    async def test_async_loadbalancer_use_api_keys(self, async_client_same_priority_api_keys):
+        client = async_client_same_priority_api_keys
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
+
+        with patch('httpx.AsyncClient.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
+
+            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-04-01-preview'
+
+            await client._client._transport.handle_async_request(req)
+
+            assert req.headers['api-key'] in (
+                'c3d116584360f9960b38cccc5f44caba',
+                '21c14252762502e8fc78b61e21db114f',
+                'd6370785453b2b9c331a94cb1b7aaa36'
             )
 
     @pytest.mark.asyncio
