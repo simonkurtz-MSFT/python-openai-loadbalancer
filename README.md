@@ -59,9 +59,12 @@ When a backend's `api_key` property is set, the `api-key` header will be replace
 
 ### Configuration
 
+Execute the following git command to ensure that updates to `config.py` are not tracked and therefore not committed. This prevents accidental check-ins of real keys and values:
+`git update-index --assume-unchanged config.py`
+
 For the load-balanced approach, please use the same model across all instances.
 
-1. Open [aoai.py](./aoai.py).
+1. Open [config.py](./config.py).
 1. Replace `<your-aoai-model>` with the name of your Azure OpenAI model.
 1. Replace `<your-aoai-instance>` with the primary/single Azure OpenAI instance.
 1. Replace `<your-aoai-instance-1>`, `<your-aoai-instance-2>`, `<your-aoai-instance-3>` with all the Azure OpenAI instances you want to load-balance across. Delete entries you don't need. See [Load Balancer Backend Configuration](#load-balancer-backend-configuration) for details.
