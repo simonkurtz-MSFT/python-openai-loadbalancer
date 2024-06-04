@@ -510,8 +510,8 @@ print(f"Number of approaches                                    : {str(sum(1 for
 print(f"Total requests                                          : {str(counter).rjust(WIDTH)}")
 print(f"Total successful requests                               : {str(success_counter).rjust(WIDTH)}")
 print(f"Total failed requests                                   : {str(failure_counter).rjust(WIDTH)}")
-print(f"Total successful requests percentage                    : {('{:.2%}'.format(success_counter / counter)).rjust(WIDTH)}")
-print(f"Total Failed requests percentage                        : {('{:.2%}'.format(failure_counter / counter)).rjust(WIDTH)}\n")
+print(f"Total successful requests percentage                    : {('{:.2%}'.format(success_counter / counter)).rjust(WIDTH)}")     # pylint: disable=C0209
+print(f"Total Failed requests percentage                        : {('{:.2%}'.format(failure_counter / counter)).rjust(WIDTH)}\n")   # pylint: disable=C0209
 
 if test_executions.standard:
     print(f"Single instance operation duration                      : {end_time - start_time:>{SECONDS_WIDTH}.2f} seconds")
