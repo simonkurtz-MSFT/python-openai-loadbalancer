@@ -4,7 +4,6 @@ import asyncio
 import logging
 import time
 import traceback
-from typing import List
 from datetime import datetime
 # Using httpx.Client and httpx.AsyncClient avoids having to update openai to 1.17.1 or newer.
 # The openai properties for DefaultHttpxClient and DefaultAsyncHttpxClient are mere wrappers for httpx.Client and httpx.AsyncClient.
@@ -12,7 +11,8 @@ from datetime import datetime
 import httpx
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import AzureOpenAI, AsyncAzureOpenAI, NotFoundError, APIError
-from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncLoadBalancer, LoadBalancer, Backend
+from src.openai_priority_loadbalancer.openai_priority_loadbalancer import AsyncLoadBalancer, LoadBalancer
+from config import Config
 
 ##########################################################################################################################################################
 
@@ -30,22 +30,7 @@ class TestExecutions:
         self.stream_load_balanced               = True
         self.async_stream_load_balanced         = True
 
-LOG_LEVEL                                       = logging.INFO     # change to DEBUG for detailed information
-NUM_OF_REQUESTS                                 = 5
-MODEL                                           = "<your-aoai-model>"  # the model, also known as the Deployment in Azure OpenAI, is common across standard and load-balanced requests
-AZURE_ENDPOINT                                  = "https://oai-eastus-xxxxxxxx.openai.azure.com"
-
-backends: List[Backend] = [
-    Backend("oai-eastus-xxxxxxxx.openai.azure.com", 1),
-    Backend("oai-southcentralus-xxxxxxxx.openai.azure.com", 1),
-    Backend("oai-westus-xxxxxxxx.openai.azure.com", 1)
-]
-
-backends_with_api_keys: List[Backend] = [
-    Backend("oai-eastus-xxxxxxxx.openai.azure.com", 1, None, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'),
-    Backend("oai-southcentralus-xxxxxxxx.openai.azure.com", 1, None, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'),
-    Backend("oai-westus-xxxxxxxx.openai.azure.com", 1, None, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-]
+LOG_LEVEL = logging.INFO     # change to DEBUG for detailed information
 
 ##########################################################################################################################################################
 
@@ -70,7 +55,7 @@ def send_request(num_of_requests: int, azure_endpoint: str):
             print(f"{datetime.now()}: Standard request {i+1}/{num_of_requests}")
 
             response = client.chat.completions.create(
-                model = MODEL,
+                model = Config.MODEL,
                 messages = [
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
@@ -96,10 +81,10 @@ def send_loadbalancer_request(num_of_requests: int):
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
-        lb = LoadBalancer(backends)
+        lb = LoadBalancer(Config.backends)
 
         client = AzureOpenAI(
-            azure_endpoint = f"https://{backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"htt[s://{Config.backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
             api_version = "2024-04-01-preview",
             http_client = httpx.Client(transport = lb)      # Inject the load balancer as the transport in a new default httpx client
@@ -110,7 +95,7 @@ def send_loadbalancer_request(num_of_requests: int):
 
             try:
                 response = client.chat.completions.create(
-                    model = MODEL,
+                    model = Config.MODEL,
                     messages = [
                         {"role": "system", "content": "You are a helpful assistant."},
                         {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
@@ -147,10 +132,10 @@ def send_loadbalancer_request_with_api_keys(num_of_requests: int):
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
-        lb = LoadBalancer(backends_with_api_keys)
+        lb = LoadBalancer(Config.backends_with_api_keys)
 
         client = AzureOpenAI(
-            azure_endpoint = f"https://{backends_with_api_keys[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"htt[s://{Config.backends_with_api_keys[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             api_key = "obtain_from_load_balancer",          # the value is not used, but it must be set
             api_version = "2024-04-01-preview",
             http_client = httpx.Client(transport = lb)      # Inject the load balancer as the transport in a new default httpx client
@@ -161,7 +146,7 @@ def send_loadbalancer_request_with_api_keys(num_of_requests: int):
 
             try:
                 response = client.chat.completions.create(
-                    model = MODEL,
+                    model = Config.MODEL,
                     messages = [
                         {"role": "system", "content": "You are a helpful assistant."},
                         {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
@@ -197,10 +182,10 @@ async def send_async_loadbalancer_request(num_of_requests: int):
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
-        lb = AsyncLoadBalancer(backends)
+        lb = AsyncLoadBalancer(Config.backends)
 
         client = AsyncAzureOpenAI(
-            azure_endpoint = f"https://{backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"htt[s://{Config.backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
             api_version = "2024-04-01-preview",
             http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
@@ -211,7 +196,7 @@ async def send_async_loadbalancer_request(num_of_requests: int):
 
             try:
                 response = await client.chat.completions.create(
-                    model = MODEL,
+                    model = Config.MODEL,
                     messages = [
                         {"role": "system", "content": "You are a helpful assistant."},
                         {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
@@ -247,10 +232,10 @@ async def send_async_loadbalancer_request_with_api_keys(num_of_requests: int):
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
-        lb = AsyncLoadBalancer(backends_with_api_keys)
+        lb = AsyncLoadBalancer(Config.backends_with_api_keys)
 
         client = AsyncAzureOpenAI(
-            azure_endpoint = f"https://{backends_with_api_keys[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"htt[s://{Config.backends_with_api_keys[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             api_key = "obtain_from_load_balancer",          # the value is not used, but it must be set
             api_version = "2024-04-01-preview",
             http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
@@ -261,7 +246,7 @@ async def send_async_loadbalancer_request_with_api_keys(num_of_requests: int):
 
             try:
                 response = await client.chat.completions.create(
-                    model = MODEL,
+                    model = Config.MODEL,
                     messages = [
                         {"role": "system", "content": "You are a helpful assistant."},
                         {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
@@ -298,10 +283,10 @@ def send_stream_loadbalancer_request(num_of_requests: int):
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
-        lb = LoadBalancer(backends)
+        lb = LoadBalancer(Config.backends)
 
         client = AzureOpenAI(
-            azure_endpoint = f"https://{backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"htt[s://{Config.backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
             api_version = "2024-04-01-preview",
             http_client = httpx.Client(transport = lb)      # Inject the load balancer as the transport in a new default httpx client
@@ -314,7 +299,7 @@ def send_stream_loadbalancer_request(num_of_requests: int):
                 stream_start_time = time.time()
 
                 response = client.chat.completions.create(
-                    model = MODEL,
+                    model = Config.MODEL,
                     messages = [
                         {"role": "system", "content": "You are a helpful assistant."},
                         {'role': 'user', 'content': 'Count to 5, with a comma between each number and no newlines. E.g., 1, 2, 3, ...'}
@@ -371,10 +356,10 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int):
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
-        lb = AsyncLoadBalancer(backends)
+        lb = AsyncLoadBalancer(Config.backends)
 
         client = AsyncAzureOpenAI(
-            azure_endpoint = f"https://{backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            azure_endpoint = f"htt[s://{Config.backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
             api_version = "2024-04-01-preview",
             http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
@@ -387,7 +372,7 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int):
                 stream_start_time = time.time()
 
                 response = await client.chat.completions.create(
-                    model = MODEL,
+                    model = Config.MODEL,
                     messages = [
                         {"role": "system", "content": "You are a helpful assistant."},
                         {'role': 'user', 'content': 'Count to 5, with a comma between each number and no newlines. E.g., 1, 2, 3, ...'}
@@ -452,13 +437,13 @@ logging.basicConfig(
 )
 
 # Ensure that variables are set.
-if MODEL == "<your-aoai-model>":
+if Config.MODEL == "<your-aoai-model>":
     raise ValueError("MODEL must be set to a valid AOAI model.\n")
 
-if "xxxxxxxx" in AZURE_ENDPOINT:
+if "xxxxxxxx" in Config.AZURE_ENDPOINT:
     raise ValueError("AZURE_ENDPOINT must be set to a valid endpoint.\n")
 
-for backend in backends:
+for backend in Config.backends:
     if "xxxxxxxx" in backend.host:
         raise ValueError(f"Backend {backend.host} must be set to a valid endpoint.\n")
 
@@ -469,49 +454,49 @@ test_executions = TestExecutions()
 if test_executions.standard:
     print(f"\nStandard Requests\n{'-' * 17}\n")
     start_time = time.time()
-    send_request(NUM_OF_REQUESTS, AZURE_ENDPOINT)
+    send_request(Config.NUM_OF_REQUESTS, Config.AZURE_ENDPOINT)
     end_time = time.time()
 
 # 2: Load-balanced requests to one or more AOAI backends
 if test_executions.load_balanced:
     print(f"\nLoad Balanced Requests\n{'-' * 22}\n")
     lb_start_time = time.time()
-    send_loadbalancer_request(NUM_OF_REQUESTS)
+    send_loadbalancer_request(Config.NUM_OF_REQUESTS)
     lb_end_time = time.time()
 
 # 3: Load-balanced requests to one or more AOAI backends with API keys
 if test_executions.load_balanced_with_api_keys:
     print(f"\nLoad Balanced Requests With API Keys\n{'-' * 36}\n")
     lb_with_api_keys_start_time = time.time()
-    send_loadbalancer_request_with_api_keys(NUM_OF_REQUESTS)
+    send_loadbalancer_request_with_api_keys(Config.NUM_OF_REQUESTS)
     lb_with_api_keys_end_time = time.time()
 
 # 4: Async Load-balanced requests to one or more AOAI backends
 if test_executions.async_load_balanced:
     print(f"\nAsync Load Balanced Requests\n{'-' * 28}\n")
     async_lb_start_time = time.time()
-    asyncio.run(send_async_loadbalancer_request(NUM_OF_REQUESTS))
+    asyncio.run(send_async_loadbalancer_request(Config.NUM_OF_REQUESTS))
     async_lb_end_time = time.time()
 
 # 5: Async Load-balanced requests to one or more AOAI backends with API keys
 if test_executions.async_load_balanced_with_api_keys:
     print(f"\nAsync Load Balanced Requests With API Keys\n{'-' * 42}\n")
     async_lb_with_api_keys_start_time = time.time()
-    asyncio.run(send_async_loadbalancer_request_with_api_keys(NUM_OF_REQUESTS))
+    asyncio.run(send_async_loadbalancer_request_with_api_keys(Config.NUM_OF_REQUESTS))
     async_lb_with_api_keys_end_time = time.time()
 
 # : Load-balanced streaming requests to one or more AOAI backends
 if test_executions.stream_load_balanced:
     print(f"\nStream Load Balanced Requests\n{'-' * 29}\n")
     stream_lb_start_time = time.time()
-    send_stream_loadbalancer_request(NUM_OF_REQUESTS)
+    send_stream_loadbalancer_request(Config.NUM_OF_REQUESTS)
     stream_lb_end_time = time.time()
 
 # 5: Async Load-balanced streaming requests to one or more AOAI backends
 if test_executions.async_stream_load_balanced:
     print(f"\nStream Async Load Balanced Requests\n{'-' * 35}\n")
     async_stream_lb_start_time = time.time()
-    asyncio.run(send_async_stream_loadbalancer_request(NUM_OF_REQUESTS))
+    asyncio.run(send_async_stream_loadbalancer_request(Config.NUM_OF_REQUESTS))
     async_stream_lb_end_time = time.time()
 
 # Statistics
@@ -519,7 +504,7 @@ WIDTH = 16
 SECONDS_WIDTH = WIDTH - 8
 
 print(f"\n{'*' * 100}\n")
-print(f"Requests per approach                                   : {str(NUM_OF_REQUESTS).rjust(WIDTH)}")
+print(f"Requests per approach                                   : {str(Config.NUM_OF_REQUESTS).rjust(WIDTH)}")
 print(f"Number of approaches                                    : {str(sum(1 for value in vars(test_executions).values() if value is True)).rjust(WIDTH)}\n")
 
 print(f"Total requests                                          : {str(counter).rjust(WIDTH)}")
