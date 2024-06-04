@@ -13,14 +13,15 @@ class Backend:
     """Class representing a backend object used with Azure OpenAI, etc."""
 
     # Constructor
-    def __init__(self, host: str, priority: int, path: str = None):
+    def __init__(self, host: str, priority: int, path: str = None, api_key: str = None):
         # Public instance variables
-        self.host = host
-        self.path = '' if path is None else path
-        self.is_throttling = False
-        self.priority = priority
-        self.retry_after = datetime.min
-        self.successful_call_count = 0
+        self.api_key: str = api_key
+        self.host: str = host
+        self.is_throttling: bool = False
+        self.path: str = '' if path is None else path
+        self.priority: int = priority
+        self.retry_after: datetime = datetime.min
+        self.successful_call_count: int = 0
 
 # Reference design at https://github.com/encode/httpx/blob/master/httpx/_transports/base.py
 # BaseLoadBalancer providing functionality to both synchronous and asynchronous load balancers
@@ -158,7 +159,8 @@ class BaseLoadBalancer():
 
         backend: Backend = self.backends[backend_index]
 
-        # Modify the request. Note that only the URL and Host header are being modified on the original request object. We make the smallest incision possible to avoid side effects.
+        # Modify the request. Note that only the URL and Host header are being modified on the original request object. Additionally, if an API key is defined, set
+        # the api-key header with that value. We make the smallest incision possible to avoid side effects.
         # Update URL and host header as both must match the backend server.
         request.url = request.url.copy_with(host = backend.host)
 
@@ -181,7 +183,11 @@ class BaseLoadBalancer():
         request.headers = request.headers.copy()    # We need to create a mutable copy of the headers before we modify and assign them back to the request object.
         request.headers['host'] = backend.host
 
-        self._log.debug("URL %s and host %s", request.url, request.headers['host'])
+        if backend.api_key is not None and backend.api_key != "":
+            request.headers['api-key'] = backend.api_key
+            self._log.debug("URL = [%s]; host header = [%s]; api-key header = [%s]", request.url, request.headers['host'], request.headers['api-key'])
+        else:
+            self._log.debug("URL = [%s]; host header = [%s]", request.url, request.headers['host'])
 
     def _return_429(self) -> httpx.Response:
         """Return an HTTP 429 response with a Retry-After header value. This is returned to the caller of this load balancer when no backends are available."""

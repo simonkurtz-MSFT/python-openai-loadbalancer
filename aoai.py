@@ -22,20 +22,29 @@ class TestExecutions:
     """Class representing the tests that can be performed."""
 
     def __init__(self):
-        self.standard                   = True
-        self.load_balanced              = True
-        self.async_load_balanced        = True
-        self.stream_load_balanced       = True
-        self.async_stream_load_balanced = True
+        self.standard                           = True
+        self.load_balanced                      = True
+        self.load_balanced_with_api_keys        = True
+        self.async_load_balanced                = True
+        self.async_load_balanced_with_api_keys  = True
+        self.stream_load_balanced               = True
+        self.async_stream_load_balanced         = True
 
-LOG_LEVEL                               = logging.INFO
-NUM_OF_REQUESTS                         = 5
-MODEL                                   = "<your-aoai-model>"  # the model, also known as the Deployment in Azure OpenAI, is common across standard and load-balanced requests
-AZURE_ENDPOINT                          = "https://oai-eastus-xxxxxxxx.openai.azure.com"
+LOG_LEVEL                                       = logging.INFO     # change to DEBUG for detailed information
+NUM_OF_REQUESTS                                 = 5
+MODEL                                           = "<your-aoai-model>"  # the model, also known as the Deployment in Azure OpenAI, is common across standard and load-balanced requests
+AZURE_ENDPOINT                                  = "https://oai-eastus-xxxxxxxx.openai.azure.com"
+
 backends: List[Backend] = [
     Backend("oai-eastus-xxxxxxxx.openai.azure.com", 1),
     Backend("oai-southcentralus-xxxxxxxx.openai.azure.com", 1),
     Backend("oai-westus-xxxxxxxx.openai.azure.com", 1)
+]
+
+backends_with_api_keys: List[Backend] = [
+    Backend("oai-eastus-xxxxxxxx.openai.azure.com", 1, None, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'),
+    Backend("oai-southcentralus-xxxxxxxx.openai.azure.com", 1, None, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'),
+    Backend("oai-westus-xxxxxxxx.openai.azure.com", 1, None, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 ]
 
 ##########################################################################################################################################################
@@ -130,6 +139,57 @@ def send_loadbalancer_request(num_of_requests: int):
         print("Exception:", vars(e))
         traceback.print_exc()
 
+# Load-balanced Azure OpenAI Implementation (Multiple Backends)
+def send_loadbalancer_request_with_api_keys(num_of_requests: int):
+    """Function to send load-balanced requests to the Azure OpenAI API using API keys."""
+
+    global counter, failure_counter, success_counter
+
+    try:
+        # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
+        lb = LoadBalancer(backends_with_api_keys)
+
+        client = AzureOpenAI(
+            azure_endpoint = f"https://{backends_with_api_keys[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            api_key = "obtain_from_load_balancer",          # the value is not used, but it must be set
+            api_version = "2024-04-01-preview",
+            http_client = httpx.Client(transport = lb)      # Inject the load balancer as the transport in a new default httpx client
+        )
+
+        for i in range(num_of_requests):
+            print(f"{datetime.now()}: LoadBalancer request {i+1}/{num_of_requests}")
+
+            try:
+                response = client.chat.completions.create(
+                    model = MODEL,
+                    messages = [
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
+                    ]
+                )
+
+                success_counter += 1
+                print(f"{datetime.now()}:\n{response}\n\n\n")
+            except APIError as e:
+                if e.code == 429:
+                    print(f"{datetime.now()}: Rate limit exceeded. Python OpenAI Library has exhausted all of its retries.")
+                else:
+                    print(f"{datetime.now()}: Python OpenAI Library request failure.")
+
+                failure_counter += 1
+            except Exception:
+                traceback.print_exc()
+                failure_counter += 1
+
+            counter += 1
+
+    except NotFoundError as e:
+        print("openai.NotFoundError:", vars(e))
+        traceback.print_exc()
+    except Exception as e:
+        print("Exception:", vars(e))
+        traceback.print_exc()
+
 async def send_async_loadbalancer_request(num_of_requests: int):
     """Function to send load-balanced requests to the Azure OpenAI API."""
 
@@ -142,6 +202,56 @@ async def send_async_loadbalancer_request(num_of_requests: int):
         client = AsyncAzureOpenAI(
             azure_endpoint = f"https://{backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
+            api_version = "2024-04-01-preview",
+            http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
+        )
+
+        for i in range(num_of_requests):
+            print(f"{datetime.now()}: Async LoadBalancer request {i+1}/{num_of_requests}")
+
+            try:
+                response = await client.chat.completions.create(
+                    model = MODEL,
+                    messages = [
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": "Does Azure OpenAI support customer managed keys?"}
+                    ]
+                )
+
+                success_counter += 1
+                print(f"{datetime.now()}:\n{response}\n\n\n")
+            except APIError as e:
+                if e.code == 429:
+                    print(f"{datetime.now()}: Rate limit exceeded. Python OpenAI Library has exhausted all of its retries.")
+                else:
+                    print(f"{datetime.now()}: Python OpenAI Library request failure.")
+
+                failure_counter += 1
+            except Exception:
+                traceback.print_exc()
+                failure_counter += 1
+
+            counter += 1
+
+    except NotFoundError as e:
+        print("openai.NotFoundError:", vars(e))
+        traceback.print_exc()
+    except Exception as e:
+        print("Exception:", vars(e))
+        traceback.print_exc()
+
+async def send_async_loadbalancer_request_with_api_keys(num_of_requests: int):
+    """Function to send load-balanced requests to the Azure OpenAI API using API keys."""
+
+    global counter, failure_counter, success_counter
+
+    try:
+        # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
+        lb = AsyncLoadBalancer(backends_with_api_keys)
+
+        client = AsyncAzureOpenAI(
+            azure_endpoint = f"https://{backends_with_api_keys[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
+            api_key = "obtain_from_load_balancer",          # the value is not used, but it must be set
             api_version = "2024-04-01-preview",
             http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
         )
@@ -332,7 +442,7 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int):
 
 # >>> TEST HARNESS <<<
 
-success_counter = failure_counter = counter = 0
+success_counter = failure_counter = counter = 0 # pylint: disable=C0103
 
 # Set up the logger: https://www.machinelearningplus.com/python/python-logging-guide/
 logging.basicConfig(
@@ -369,14 +479,28 @@ if test_executions.load_balanced:
     send_loadbalancer_request(NUM_OF_REQUESTS)
     lb_end_time = time.time()
 
-# 3: Async Load-balanced requests to one or more AOAI backends
+# 3: Load-balanced requests to one or more AOAI backends with API keys
+if test_executions.load_balanced_with_api_keys:
+    print(f"\nLoad Balanced Requests With API Keys\n{'-' * 36}\n")
+    lb_with_api_keys_start_time = time.time()
+    send_loadbalancer_request_with_api_keys(NUM_OF_REQUESTS)
+    lb_with_api_keys_end_time = time.time()
+
+# 4: Async Load-balanced requests to one or more AOAI backends
 if test_executions.async_load_balanced:
     print(f"\nAsync Load Balanced Requests\n{'-' * 28}\n")
     async_lb_start_time = time.time()
     asyncio.run(send_async_loadbalancer_request(NUM_OF_REQUESTS))
     async_lb_end_time = time.time()
 
-# 4: Load-balanced streaming requests to one or more AOAI backends
+# 5: Async Load-balanced requests to one or more AOAI backends with API keys
+if test_executions.async_load_balanced_with_api_keys:
+    print(f"\nAsync Load Balanced Requests With API Keys\n{'-' * 42}\n")
+    async_lb_with_api_keys_start_time = time.time()
+    asyncio.run(send_async_loadbalancer_request_with_api_keys(NUM_OF_REQUESTS))
+    async_lb_with_api_keys_end_time = time.time()
+
+# : Load-balanced streaming requests to one or more AOAI backends
 if test_executions.stream_load_balanced:
     print(f"\nStream Load Balanced Requests\n{'-' * 29}\n")
     stream_lb_start_time = time.time()
@@ -395,24 +519,28 @@ WIDTH = 16
 SECONDS_WIDTH = WIDTH - 8
 
 print(f"\n{'*' * 100}\n")
-print(f"Requests per approach                           : {str(NUM_OF_REQUESTS).rjust(WIDTH)}")
-print(f"Number of approaches                            : {str(sum(1 for value in vars(test_executions).values() if value is True)).rjust(WIDTH)}\n")
+print(f"Requests per approach                                   : {str(NUM_OF_REQUESTS).rjust(WIDTH)}")
+print(f"Number of approaches                                    : {str(sum(1 for value in vars(test_executions).values() if value is True)).rjust(WIDTH)}\n")
 
-print(f"Total requests                                  : {str(counter).rjust(WIDTH)}")
-print(f"Total successful requests                       : {str(success_counter).rjust(WIDTH)}")
-print(f"Total failed requests                           : {str(failure_counter).rjust(WIDTH)}")
-print(f"Total successful requests percentage            : {('{:.2%}'.format(success_counter / counter)).rjust(WIDTH)}")
-print(f"Total Failed requests percentage                : {('{:.2%}'.format(failure_counter / counter)).rjust(WIDTH)}\n")
+print(f"Total requests                                          : {str(counter).rjust(WIDTH)}")
+print(f"Total successful requests                               : {str(success_counter).rjust(WIDTH)}")
+print(f"Total failed requests                                   : {str(failure_counter).rjust(WIDTH)}")
+print(f"Total successful requests percentage                    : {('{:.2%}'.format(success_counter / counter)).rjust(WIDTH)}")
+print(f"Total Failed requests percentage                        : {('{:.2%}'.format(failure_counter / counter)).rjust(WIDTH)}\n")
 
 if test_executions.standard:
-    print(f"Single instance operation duration              : {end_time - start_time:>{SECONDS_WIDTH}.2f} seconds")
+    print(f"Single instance operation duration                      : {end_time - start_time:>{SECONDS_WIDTH}.2f} seconds")
 if test_executions.load_balanced:
-    print(f"Load-balancer operation duration                : {lb_end_time - lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
+    print(f"Load-balancer operation duration                        : {lb_end_time - lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
+if test_executions.load_balanced_with_api_keys:
+    print(f"Load-balancer with API keys operation duration          : {lb_with_api_keys_end_time - lb_with_api_keys_start_time:>{SECONDS_WIDTH}.2f} seconds")
 if test_executions.async_load_balanced:
-    print(f"Async Load-balancer operation duration          : {async_lb_end_time - async_lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
+    print(f"Async Load-balancer operation duration                  : {async_lb_end_time - async_lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
+if test_executions.async_load_balanced_with_api_keys:
+    print(f"Async Load-balancer with API keys operation duration    : {async_lb_with_api_keys_end_time - async_lb_with_api_keys_start_time:>{SECONDS_WIDTH}.2f} seconds")
 if test_executions.stream_load_balanced:
-    print(f"Stream Load-balancer operation duration         : {stream_lb_end_time - stream_lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
+    print(f"Stream Load-balancer operation duration                 : {stream_lb_end_time - stream_lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
 if test_executions.async_stream_load_balanced:
-    print(f"Stream Async Load-balancer operation duration   : {async_stream_lb_end_time - async_stream_lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
+    print(f"Stream Async Load-balancer operation duration           : {async_stream_lb_end_time - async_stream_lb_start_time:>{SECONDS_WIDTH}.2f} seconds")
 
 print("\n\n")
