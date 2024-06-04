@@ -81,7 +81,6 @@ def send_loadbalancer_request(num_of_requests: int):
 
     try:
         # Instantiate the LoadBalancer class and create a new https client with the load balancer as the injected transport.
-        lb = LoadBalancer(Config.backends)
         lb = LoadBalancer(config.backends)
 
         client = AzureOpenAI(
