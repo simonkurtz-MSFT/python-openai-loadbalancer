@@ -80,7 +80,7 @@ class BaseLoadBalancer():
 
         # 2) Out of the available backends indices, select a random index to use.
         if len(available_backends) > 0:
-            # Since this code is very likely being called from multiple python instances with multiple workers in parallel executions, there's no way to distribute requests
+            # Since this code is very likely being called from multiple Python instances with multiple workers in parallel executions, there's no way to distribute requests
             # uniformly across all Azure OpenAI instances. Doing so would require a centralized service, cache, etc. to keep track of a common backends list, but that would
             # also imply a locking mechanism for updates, which would immediately inhibit the performance benefits of the load balancer. This is why this is more of a
             # pseudo load-balancer. Therefore, we'll just randomize across the available backends.

@@ -1,4 +1,4 @@
-# This is the original work that targeted only a single python worker (no parallelism). This is an unlikely scenario for production, but I decided to keep it in the repo.
+# This is the original work that targeted only a single Python worker (no parallelism). This is an unlikely scenario for production, but I decided to keep it in the repo.
 
 from azure.identity import DefaultAzureCredential
 from datetime import datetime

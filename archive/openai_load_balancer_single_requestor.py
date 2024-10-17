@@ -1,4 +1,4 @@
-# This is the original work that targeted only a single python worker (no parallelism). This is an unlikely scenario for production, but I decided to keep it in the repo.
+# This is the original work that targeted only a single Python worker (no parallelism). This is an unlikely scenario for production, but I decided to keep it in the repo.
 
 from datetime import datetime, MINYEAR, MAXYEAR, timedelta, timezone
 from dateutil.tz import tzutc
@@ -124,6 +124,7 @@ class LoadBalancer(BaseTransport):
 
     def _get_soonest_retry_after(self):
         soonest_retry_after = datetime(MAXYEAR, 1, 1, tzinfo=tzutc())
+        soonest_backend = ""
 
         for backend in self.backends:
             if backend.is_throttling and backend.retry_after < soonest_retry_after:

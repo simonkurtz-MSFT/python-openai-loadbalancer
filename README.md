@@ -23,9 +23,9 @@ Python OpenAI LoadBalancer is injected cleanly into the OpenAI Python API librar
 **This is a pseudo load-balancer.**
 
 When executing this code in parallel, there is no way to distribute requests uniformly across all Azure OpenAI instances. Doing so would require a centralized service, cache, etc. to keep track of a common backends list, but that would also imply a locking mechanism for updates, which would
-immediately inhibit the performance benefits of the load balancer. Without knowledge of any other python workers, we can only randomize selection of an available backend.
+immediately inhibit the performance benefits of the load balancer. Without knowledge of any other Python workers, we can only randomize selection of an available backend.
 
-Furthermore, while the load balancer handles retries across available backends, the [OpenAI Python API library](https://github.com/openai/openai-python) is not fully insulated from failing on multiple HTTP 429s when all backends are returning HTTP 429s. It is advised to load-test with multiple concurrent python workers to understand how your specific Azure OpenAI instances, your limits, and your load balancer configuration function.
+Furthermore, while the load balancer handles retries across available backends, the [OpenAI Python API library](https://github.com/openai/openai-python) is not fully insulated from failing on multiple HTTP 429s when all backends are returning HTTP 429s. It is advised to load-test with multiple concurrent Python workers to understand how your specific Azure OpenAI instances, your limits, and your load balancer configuration function.
 
 ## Attribution
 
@@ -50,12 +50,12 @@ When a backend's `api_key` property is set, the `api-key` header will be replace
 
 ## Getting Started
 
-### Cloning the repo & Preparing the python environment
+### Cloning the repo & Preparing the Python environment
 
 1. Clone the repo.
 1. Open the cloned repo folder in VS Code.
 1. Open a terminal session in VS Code.
-1. Run [setup-python.ps1](./setup-python.ps1) to prepare the python environment.
+1. Run [setup-python.ps1](./setup-python.ps1) to prepare the Python environment.
 
 ### Configuration
 
@@ -83,8 +83,8 @@ When running in Azure, it's advised to use managed identities.
 
 ## Execution
 
-1. Initially, [python-aoai.ps1](./python-aoai.ps1) once to ensure it executes correctly.
-1. Run [python-aoai.ps1](./python-aoai.ps1) concurrently in multiple terminals to simulate parallel requests from multiple python workers.
+1. Initially, run [python-aoai.ps1](./python-aoai.ps1) once to ensure it executes correctly.
+1. Run [python-aoai.ps1](./python-aoai.ps1) concurrently in multiple terminals to simulate parallel requests from multiple Python workers.
 
 ## Testing
 
@@ -110,7 +110,7 @@ Requests are made to the highest priority backend that is available. For example
 
 In the single-requestor model, the distribution of attempts over available backends should be fairly uniform for backends of the same priority.
 
-There is no likelihood of a uniform distribution across available endpoints when running multiple python workers in parallel. In the below example, each terminal is executing 20 requests over two Azure OpenAI instances, both set up with the lowest of tokens-per-minute setting. Available backends are selected randomly (see the first request in each terminal). No sharing of data between the two terminals exists. Recovery takes place, when possible; otherwise, an HTTP 429 is returned to the OpenAI Python API library.
+There is no likelihood of a uniform distribution across available endpoints when running multiple Python workers in parallel. In the below example, each terminal is executing 20 requests over two Azure OpenAI instances, both set up with the lowest of tokens-per-minute setting. Available backends are selected randomly (see the first request in each terminal). No sharing of data between the two terminals exists. Recovery takes place, when possible; otherwise, an HTTP 429 is returned to the OpenAI Python API library.
 
 ![Parallel Execution](./assets/parallel-execution.png)
 

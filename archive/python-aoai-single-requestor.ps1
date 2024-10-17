@@ -1,6 +1,6 @@
-# This is the original work that targeted only a single python worker (no parallelism). This is an unlikely scenario for production, but I decided to keep it in the repo.
+# This is the original work that targeted only a single Python worker (no parallelism). This is an unlikely scenario for production, but I decided to keep it in the repo.
 
-Write-Host "`nExecuting python Azure OpenAI ...`n"
+Write-Host "`nExecuting Python Azure OpenAI ...`n"
 
 $venvPythonPath = "./python_env/scripts/python.exe"
 if (Test-Path -Path "/usr") {

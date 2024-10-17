@@ -229,7 +229,7 @@ class TestSynchronous:
         assert available_backends == 0
 
         delay = _lb._get_soonest_retry_after()
-        assert delay < 3    # 3 seconds is the second-fastest delay. Checking against the fastest delay, 1, has very occasional failed the test.
+        assert delay < 3    # 3 seconds is the second-fastest delay. Checking against the fastest delay, 1, has very occasionally failed the test.
 
         response: httpx.Response = _lb._return_429()
         assert response.status_code == 429
@@ -451,7 +451,7 @@ class TestAsynchronous:
         assert available_backends == 0
 
         delay = _lb._get_soonest_retry_after()
-        assert delay < 3    # 3 seconds is the second-fastest delay. Checking against the fastest delay, 1, has very occasional failed the test.
+        assert delay < 3    # 3 seconds is the second-fastest delay. Checking against the fastest delay, 1, has very occasionally failed the test.
 
         response: httpx.Response = _lb._return_429()
         assert response.status_code == 429
