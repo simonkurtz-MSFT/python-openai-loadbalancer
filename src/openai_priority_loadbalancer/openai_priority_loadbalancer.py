@@ -3,7 +3,7 @@
 # Python Standard Library
 import logging
 import random
-from typing import List
+from typing import List, Union
 from datetime import datetime, MAXYEAR, MINYEAR, timedelta, timezone
 
 # Third-Party Libraries
@@ -29,7 +29,7 @@ class BaseLoadBalancer():
     """Logically abstracts the BaseLoadBalancer class which should be inherited by the synchronous and asynchronous load balancer classes."""
 
     # Constructor
-    def __init__(self, transport: httpx.BaseTransport, backends: List[Backend]):
+    def __init__(self, transport: Union[httpx.BaseTransport, httpx.AsyncBaseTransport], backends: List[Backend]):
         # Public instance variables
         self.backends = backends
 
@@ -38,6 +38,12 @@ class BaseLoadBalancer():
         self._log = logging.getLogger("openai-priority-loadbalancer")     # https://www.loggly.com/ultimate-guide/python-logging-basics/
         self._available_backends = 1
         self._transport = transport
+
+    # Magic Methods
+
+    # If a method in the BaseTransport or AsyncBaseTransport classes is not found, it will be looked up in base _transport object.
+    def __getattr__(self, name):
+        return getattr(self._transport, name)
 
     # "Protected" Methods
     def _check_throttling(self) -> None:

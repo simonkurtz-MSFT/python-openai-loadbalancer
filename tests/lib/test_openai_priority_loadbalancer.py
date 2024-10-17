@@ -382,6 +382,26 @@ class TestSynchronous:
             # Assert that the final response status code was 400
             assert response.status_code == 400
 
+    @pytest.mark.loadbalancer
+    def test_loadbalancer_loadbalancer_close(self, client_same_priority):
+        client = client_same_priority
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
+
+        with patch('httpx.Client.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
+            response = client._client._transport.handle_request(req)
+
+            assert response.status_code == 200
+
+            # Assert that the transport is not closed, then close it, then assert that it was closed.
+            assert client._client._transport.is_closed is False
+
+            client._client._transport.close()
+
+            assert client._client._transport.is_closed is True
+
 # Asynchronous Tests
 
 class TestAsynchronous:
@@ -591,3 +611,24 @@ class TestAsynchronous:
 
             # Assert that the final response status code was 400
             assert response.status_code == 400
+
+    @pytest.mark.asyncio
+    @pytest.mark.async_loadbalancer
+    async def test_async_loadbalancer_close(self, async_client_same_priority):
+        client = async_client_same_priority
+
+        # Create a mock response for the transport
+        mock_response = httpx.Response(200)
+
+        with patch('httpx.AsyncClient.send', return_value = mock_response):
+            req = client._build_request(create_final_request_options())
+            response = await client._client._transport.handle_async_request(req)
+
+            assert response.status_code == 200
+
+            # Assert that the transport is not closed, then close it, then assert that it was closed.
+            assert client._client._transport.is_closed is False
+
+            await client._client._transport.aclose()
+
+            assert client._client._transport.is_closed is True
