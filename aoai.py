@@ -48,7 +48,7 @@ def send_request(num_of_requests: int, azure_endpoint: str):
         client = AzureOpenAI(
             azure_endpoint = azure_endpoint,
             azure_ad_token_provider = token_provider,
-            api_version = "2024-04-01-preview"
+            api_version = config.API_VERSION
         )
 
         for i in range(num_of_requests):
@@ -86,7 +86,7 @@ def send_loadbalancer_request(num_of_requests: int):
         client = AzureOpenAI(
             azure_endpoint = f"https://{config.backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
-            api_version = "2024-04-01-preview",
+            api_version = config.API_VERSION,
             http_client = httpx.Client(transport = lb)      # Inject the load balancer as the transport in a new default httpx client
         )
 
@@ -137,7 +137,7 @@ def send_loadbalancer_request_with_api_keys(num_of_requests: int):
         client = AzureOpenAI(
             azure_endpoint = f"https://{config.backends_with_api_keys[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             api_key = "obtain_from_load_balancer",          # the value is not used, but it must be set
-            api_version = "2024-04-01-preview",
+            api_version = config.API_VERSION,
             http_client = httpx.Client(transport = lb)      # Inject the load balancer as the transport in a new default httpx client
         )
 
@@ -187,7 +187,7 @@ async def send_async_loadbalancer_request(num_of_requests: int):
         client = AsyncAzureOpenAI(
             azure_endpoint = f"https://{config.backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
-            api_version = "2024-04-01-preview",
+            api_version = config.API_VERSION,
             http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
         )
 
@@ -237,7 +237,7 @@ async def send_async_loadbalancer_request_with_api_keys(num_of_requests: int):
         client = AsyncAzureOpenAI(
             azure_endpoint = f"https://{config.backends_with_api_keys[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             api_key = "obtain_from_load_balancer",          # the value is not used, but it must be set
-            api_version = "2024-04-01-preview",
+            api_version = config.API_VERSION,
             http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
         )
 
@@ -288,7 +288,7 @@ def send_stream_loadbalancer_request(num_of_requests: int):
         client = AzureOpenAI(
             azure_endpoint = f"https://{config.backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
-            api_version = "2024-04-01-preview",
+            api_version = config.API_VERSION,
             http_client = httpx.Client(transport = lb)      # Inject the load balancer as the transport in a new default httpx client
         )
 
@@ -361,7 +361,7 @@ async def send_async_stream_loadbalancer_request(num_of_requests: int):
         client = AsyncAzureOpenAI(
             azure_endpoint = f"https://{config.backends[0].host}", # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
             azure_ad_token_provider = token_provider,
-            api_version = "2024-04-01-preview",
+            api_version = config.API_VERSION,
             http_client = httpx.AsyncClient(transport = lb) # Inject the load balancer as the transport in a new default httpx client
         )
 

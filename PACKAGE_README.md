@@ -105,7 +105,7 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
     client = AzureOpenAI(
         azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
         azure_ad_token_provider = token_provider,               # Your authentication may vary. Please adjust accordingly.
-        api_version = "2024-04-01-preview",
+        api_version = "2024-08-01-preview",
         http_client = httpx.Client(transport = lb)              # Inject the synchronous load balancer as the transport in a new default httpx client.
     )
     ```
@@ -118,7 +118,7 @@ from openai_priority_loadbalancer import AsyncLoadBalancer, Backend
     client = AsyncAzureOpenAI(
         azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
         azure_ad_token_provider = token_provider,               # Your authentication may vary. Please adjust accordingly.
-        api_version = "2024-04-01-preview",
+        api_version = "2024-08-01-preview",
         http_client = httpx.AsyncClient(transport = lb)         # Inject the asynchronous load balancer as the transport in a new default async httpx client.
     )
     ```
@@ -152,7 +152,7 @@ When a backend's `api_key` property is set, the `api-key` header will be replace
     client = AzureOpenAI(
         azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
         api_key = "obtain_from_load_balancer",                  # the value is not used, but it must be set
-        api_version = "2024-04-01-preview",
+        api_version = "2024-08-01-preview",
         http_client = httpx.Client(transport = lb)              # Inject the synchronous load balancer as the transport in a new default httpx client.
     )
     ```
@@ -165,7 +165,7 @@ When a backend's `api_key` property is set, the `api-key` header will be replace
     client = AsyncAzureOpenAI(
         azure_endpoint = f"https://{backends[0].host}",         # Must be seeded, so we use the first host. It will get overwritten by the load balancer.
         api_key = "obtain_from_load_balancer",                  # the value is not used, but it must be set
-        api_version = "2024-04-01-preview",
+        api_version = "2024-08-01-preview",
         http_client = httpx.AsyncClient(transport = lb)         # Inject the asynchronous load balancer as the transport in a new default async httpx client.
     )
     ```
@@ -286,14 +286,14 @@ In this log excerpt, we see that all three backends are timing out. As the stand
 The wait periods are 44 seconds (westus), 4 seconds (eastus), and 7 seconds (southcentralus) in this log. Our logic determines that eastus will become available soonest. Therefore, we return a `Retry-After` header with a value of `4`. The OpenAI Python library then adds its exponential backoff (~2 seconds here).
 
 ```text
-2024-05-11 00:56:32.299477:   Request sent to server: https://oai-westus-20240509.openai.azure.com/openai/deployments/gpt-35-turbo-sjk-001/chat/completions?api-version=2024-04-01-preview, Status Code: 429 - FAIL
+2024-05-11 00:56:32.299477:   Request sent to server: https://oai-westus-20240509.openai.azure.com/openai/deployments/gpt-35-turbo-sjk-001/chat/completions?api-version=2024-08-01-preview, Status Code: 429 - FAIL
 2024-05-11 00:56:32.299477:   Backend oai-westus-20240509.openai.azure.com is throttling. Retry after 44 second(s).
-2024-05-11 00:56:32.394350:   Request sent to server: https://oai-eastus-20240509.openai.azure.com/openai/deployments/gpt-35-turbo-sjk-001/chat/completions?api-version=2024-04-01-preview, Status Code: 429 - FAIL
+2024-05-11 00:56:32.394350:   Request sent to server: https://oai-eastus-20240509.openai.azure.com/openai/deployments/gpt-35-turbo-sjk-001/chat/completions?api-version=2024-08-01-preview, Status Code: 429 - FAIL
 2024-05-11 00:56:32.395578:   Backend oai-eastus-20240509.openai.azure.com is throttling. Retry after 4 second(s).
-2024-05-11 00:56:32.451891:   Request sent to server: https://oai-southcentralus-20240509.openai.azure.com/openai/deployments/gpt-35-turbo-sjk-001/chat/completions?api-version=2024-04-01-preview, Status Code: 429 - FAIL
+2024-05-11 00:56:32.451891:   Request sent to server: https://oai-southcentralus-20240509.openai.azure.com/openai/deployments/gpt-35-turbo-sjk-001/chat/completions?api-version=2024-08-01-preview, Status Code: 429 - FAIL
 2024-05-11 00:56:32.452883:   Backend oai-southcentralus-20240509.openai.azure.com is throttling. Retry after 7 second(s).
 2024-05-11 00:56:32.452883:   No backends available. Exiting.
 2024-05-11 00:56:32.453891:   Soonest Retry After: oai-eastus-20240509.openai.azure.com - 4 second(s)
 2024-05-11 00:56:38.551672:   Backend oai-eastus-20240509.openai.azure.com is no longer throttling.
-2024-05-11 00:56:39.851076:   Request sent to server: https://oai-eastus-20240509.openai.azure.com/openai/deployments/gpt-35-turbo-sjk-001/chat/completions?api-version=2024-04-01-preview, Status code: 200
+2024-05-11 00:56:39.851076:   Request sent to server: https://oai-eastus-20240509.openai.azure.com/openai/deployments/gpt-35-turbo-sjk-001/chat/completions?api-version=2024-08-01-preview, Status code: 200
 ```

@@ -31,7 +31,7 @@ def create_async_client(backends: List[Backend]) -> AsyncAzureOpenAI:
     return AsyncAzureOpenAI(
         azure_endpoint = "https://foo.openai.azure.com",
         api_key = "example API key",
-        api_version = "2024-04-01-preview",
+        api_version = "2024-08-01-preview",
         http_client = httpx.AsyncClient(transport = lb)
     )
 
@@ -41,7 +41,7 @@ def create_client(backends: List[Backend]) -> AzureOpenAI:
     return AzureOpenAI(
         azure_endpoint = "https://foo.openai.azure.com",
         api_key = "example API key",
-        api_version = "2024-04-01-preview",
+        api_version = "2024-08-01-preview",
         http_client = httpx.Client(transport = lb)
     )
 
@@ -288,14 +288,14 @@ class TestSynchronous:
         with patch('httpx.Client.send', return_value = mock_response):
             req = client._build_request(create_final_request_options())
 
-            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-04-01-preview'
+            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-08-01-preview'
 
             client._client._transport.handle_request(req)
 
             assert req.url in (
-                'https://oai-eastus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
-                'https://oai-westus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
-                'https://oai-southcentralus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview'
+                'https://oai-eastus.openai.azure.com/ai/openai/completions?api-version=2024-08-01-preview',
+                'https://oai-westus.openai.azure.com/ai/openai/completions?api-version=2024-08-01-preview',
+                'https://oai-southcentralus.openai.azure.com/ai/openai/completions?api-version=2024-08-01-preview'
             )
 
     @pytest.mark.loadbalancer
@@ -308,7 +308,7 @@ class TestSynchronous:
         with patch('httpx.Client.send', return_value = mock_response):
             req = client._build_request(create_final_request_options())
 
-            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-04-01-preview'
+            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-08-01-preview'
 
             client._client._transport.handle_request(req)
 
@@ -512,14 +512,14 @@ class TestAsynchronous:
         with patch('httpx.AsyncClient.send', return_value = mock_response):
             req = client._build_request(create_final_request_options())
 
-            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-04-01-preview'
+            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-08-01-preview'
 
             await client._client._transport.handle_async_request(req)
 
             assert req.url in (
-                'https://oai-eastus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
-                'https://oai-westus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview',
-                'https://oai-southcentralus.openai.azure.com/ai/openai/completions?api-version=2024-04-01-preview'
+                'https://oai-eastus.openai.azure.com/ai/openai/completions?api-version=2024-08-01-preview',
+                'https://oai-westus.openai.azure.com/ai/openai/completions?api-version=2024-08-01-preview',
+                'https://oai-southcentralus.openai.azure.com/ai/openai/completions?api-version=2024-08-01-preview'
             )
 
     @pytest.mark.asyncio
@@ -533,7 +533,7 @@ class TestAsynchronous:
         with patch('httpx.AsyncClient.send', return_value = mock_response):
             req = client._build_request(create_final_request_options())
 
-            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-04-01-preview'
+            assert req.url == 'https://foo.openai.azure.com/openai/completions?api-version=2024-08-01-preview'
 
             await client._client._transport.handle_async_request(req)
 
