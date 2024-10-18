@@ -36,7 +36,13 @@ LOG_LEVEL = logging.INFO     # change to DEBUG for detailed information
 
 # get_bearer_token_provider automatically caches and refreshes tokens.
 # https://github.com/openai/openai-python/blob/main/examples/azure_ad.py#L5
-token_provider = get_bearer_token_provider(DefaultAzureCredential(), "https://cognitiveservices.azure.com/.default")
+
+# Sometimes, especially if you receive 400s from Azure OpenAI, you may need to use fresh credentials after an az logout / az login. Experiment with excluding the cached credential, if need be.
+# You can also remove the MSAL cache files in C:\Users\<user>\AppData\Local\.IdentityService: msal.cache, msalV2.cache
+# Set logging to DEBUG above to see where it's failing.
+# https://github.com/Azure/azure-sdk-for-python/issues/29040
+credential = DefaultAzureCredential(exclude_shared_token_cache_credential = False)
+token_provider = get_bearer_token_provider(credential, "https://cognitiveservices.azure.com/.default")
 
 # Standard Azure OpenAI Implementation (One Backend)
 def send_request(num_of_requests: int, azure_endpoint: str):
