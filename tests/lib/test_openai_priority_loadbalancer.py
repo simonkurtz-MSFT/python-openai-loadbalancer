@@ -102,11 +102,11 @@ def backends_tiered_priority(backends_factory) -> List[Backend]:
 
 @pytest.fixture
 def backends_0_and_1_throttling(backends_factory) -> List[Backend]:
-    return backends_factory([1, 1, 1], [True, True, False], [3, 1, None], [None, None, None], [None, None, None])
+    return backends_factory([1, 1, 1], [True, True, False], [3, 2, None], [None, None, None], [None, None, None])
 
 @pytest.fixture
 def all_backends_throttling(backends_factory) -> List[Backend]:
-    return backends_factory([1, 1, 1], [True, True, True], [3, 1, 5], [None, None, None], [None, None, None])
+    return backends_factory([1, 1, 1], [True, True, True], [4, 2, 6], [None, None, None], [None, None, None])
 
 @pytest.fixture
 def priority_backend_0_throttling(backends_factory) -> List[Backend]:
@@ -233,7 +233,7 @@ class TestSynchronous:
 
         response: httpx.Response = _lb._return_429()
         assert response.status_code == 429
-        assert response.headers["Retry-After"] == "1"
+        assert response.headers["Retry-After"] in ["1", "2"]    # could be either value depending on test runtime
 
     @pytest.mark.skipif(SKIP_LONG_RUNNING_TESTS is True, reason = "Flag is set to skip long tests.")
     @pytest.mark.loadbalancer
@@ -249,7 +249,7 @@ class TestSynchronous:
         selected_index = _lb._get_backend_index()
         assert selected_index == -1
         delay = _lb._get_soonest_retry_after()
-        assert delay == 1
+        assert delay in [1, 2]      # could be either value depending on test runtime
 
         time.sleep(6)
 
@@ -455,7 +455,8 @@ class TestAsynchronous:
 
         response: httpx.Response = _lb._return_429()
         assert response.status_code == 429
-        assert response.headers["Retry-After"] == "1"
+        assert response.headers["Retry-After"] in ["1", "2"]    # could be either value depending on test runtime
+
 
     @pytest.mark.skipif(SKIP_LONG_RUNNING_TESTS is True, reason = "Flag is set to skip long tests.")
     @pytest.mark.async_loadbalancer
@@ -471,7 +472,7 @@ class TestAsynchronous:
         selected_index = _lb._get_backend_index()
         assert selected_index == -1
         delay = _lb._get_soonest_retry_after()
-        assert delay == 1
+        assert delay in [1, 2]      # could be either value depending on test runtime
 
         time.sleep(6)
 
